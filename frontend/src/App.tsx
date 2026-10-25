@@ -1,3 +1,4 @@
+import { VoicePhoneView } from "./components/VoicePhoneView";
 import { useState, useEffect, useRef } from "react";
 import {
   ResponsiveContainer,
@@ -567,6 +568,33 @@ export function App() {
     }
   };
 
+
+  // Direct text prompt handler for phone interface
+  const handleSendDirectPrompt = async (text: string) => {
+    try {
+      setIsProcessing(true);
+      const res = await fetch(`${BACKEND_BASE}/api/research/query`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: text }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActiveSession((prev) => ({
+          sessionId: prev ? prev.sessionId : Date.now(),
+          originalText: text,
+          editedText: text,
+          audioUrl: prev ? prev.audioUrl : "",
+          aiReply: data.answer || "Recorded to your personal Life OS.",
+        }));
+      }
+    } catch (err) {
+      console.error("Direct prompt error:", err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <div className="app-container">
       {/* Header & Navigation */}
@@ -645,118 +673,21 @@ export function App() {
         </div>
       </header>
 
-      {/* VIEW 1: Voice Assistant */}
+      {/* VIEW 1: Voice Assistant (Luxury OLED Mobile Interface) */}
       {activeTab === "voice" && (
-        <>
-          <main className="voice-hero">
-            <div className={`orb-container ${isRecording ? "recording" : ""}`}>
-              <div className="orb-ring ring-outer" />
-              <div className="orb-ring ring-mid" />
-              <button
-                className="mic-button"
-                onClick={toggleRecording}
-                aria-label={isRecording ? "Stop Recording" : "Start Recording"}
-                title="Click to speak"
-              >
-                <svg className="mic-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div className="status-label">{statusText}</div>
-            <div className="sub-label">
-              {isRecording
-                ? "Speak your update naturally — press again when finished"
-                : "Push-to-talk: speak your daily updates, routines, and measurements"}
-            </div>
-          </main>
-
-          {activeSession && (
-            <section className="session-card">
-              <div className="card-header">
-                <div className="card-title">
-                  <span style={{ color: "#38bdf8" }}>●</span> Recorded Voice Update #{activeSession.sessionId}
-                </div>
-              </div>
-
-              <div className="audio-controls">
-                <audio controls className="audio-player" src={activeSession.audioUrl} />
-              </div>
-
-              <div className="transcript-label">
-                <span>Transcribed by Local Whisper (Editable)</span>
-                {activeSession.editedText !== activeSession.originalText && (
-                  <span style={{ color: "#f59e0b" }}>Modified</span>
-                )}
-              </div>
-
-              <textarea
-                className="transcript-textarea"
-                value={activeSession.editedText}
-                onChange={(e) =>
-                  setActiveSession({ ...activeSession, editedText: e.target.value })
-                }
-                placeholder="Edit transcript if Whisper made any speech mistakes..."
-              />
-
-              <div className="card-actions">
-                <button
-                  className="btn-secondary"
-                  onClick={handleSaveTranscript}
-                  disabled={isSaving}
-                >
-                  {isSaving ? "Saving..." : "Save Corrections"}
-                </button>
-                <button
-                  className="btn-primary"
-                  onClick={handleSendToAI}
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? "Processing..." : "Confirm & Send to SKIM"}
-                </button>
-              </div>
-
-              {activeSession.aiReply && (
-                <div className="ai-reply-box">
-                  <div className="ai-reply-header">SKIM Assistant Response</div>
-                  <div className="ai-reply-text">{activeSession.aiReply}</div>
-                </div>
-              )}
-            </section>
-          )}
-
-          <section className="history-section">
-            <div className="section-title">Recent Voice Recordings</div>
-            {sessions.length === 0 ? (
-              <div style={{ color: "#64748b", fontSize: "0.9rem" }}>
-                No recorded voice sessions yet. Press the microphone button above to record your first update.
-              </div>
-            ) : (
-              <div className="history-list">
-                {sessions.map((s) => (
-                  <div key={s.session_id} className="history-item">
-                    <div className="history-item-top">
-                      <span>Session #{s.session_id} • {new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                      <span>{s.duration_seconds ? `${s.duration_seconds}s` : ""}</span>
-                    </div>
-                    <div className="history-text">
-                      {s.edited_text || s.original_text || "(No transcript)"}
-                    </div>
-                    {s.audio_url && (
-                      <audio controls className="history-audio" src={`${BACKEND_BASE}${s.audio_url}`} />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        </>
+        <VoicePhoneView
+          isRecording={isRecording}
+          statusText={statusText}
+          toggleRecording={toggleRecording}
+          activeSession={activeSession}
+          sessions={sessions}
+          handleSaveTranscript={handleSaveTranscript}
+          handleSendToAI={handleSendToAI}
+          isSaving={isSaving}
+          isProcessing={isProcessing}
+          setActiveSession={setActiveSession}
+          onSendMessage={handleSendDirectPrompt}
+        />
       )}
 
       {/* VIEW 2: My Day (Daily Plan & Next Action) */}
