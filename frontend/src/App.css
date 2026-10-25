@@ -356,6 +356,95 @@
   margin-bottom: 30px;
 }
 
+/* Clean Empty State / Welcome Hero */
+.chat-welcome-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 60px 20px 40px;
+  animation: fadeInMsg 0.4s ease-out;
+}
+
+.welcome-avatar-orb {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #c084fc 0%, #7e22ce 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  box-shadow: 0 0 35px rgba(192, 132, 252, 0.4), inset 0 0 15px rgba(255, 255, 255, 0.3);
+  margin-bottom: 22px;
+}
+
+.welcome-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 10px;
+  letter-spacing: -0.02em;
+}
+
+.welcome-sub {
+  font-size: 0.95rem;
+  color: #a79bb5;
+  max-width: 480px;
+  line-height: 1.5;
+  margin-bottom: 36px;
+}
+
+.welcome-suggestions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  width: 100%;
+  max-width: 720px;
+}
+
+.welcome-suggestion-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(13, 9, 23, 0.7);
+  border: 1px solid rgba(192, 132, 252, 0.14);
+  border-radius: 14px;
+  padding: 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #f3e8ff;
+}
+
+.welcome-suggestion-card:hover {
+  background: rgba(192, 132, 252, 0.1);
+  border-color: rgba(192, 132, 252, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.welcome-suggestion-card .card-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.welcome-suggestion-card .card-headline {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.welcome-suggestion-card .card-desc {
+  font-size: 0.76rem;
+  color: #9f8fae;
+  line-height: 1.4;
+}
+
 .chat-message-item {
   display: flex;
   gap: 16px;

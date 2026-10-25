@@ -453,7 +453,7 @@ export function App() {
         editedText: data.original_text,
         audioUrl: `${BACKEND_BASE}${data.audio_url}`,
       });
-      setStatusText("Transcription complete! Review or send to AI.");
+      setStatusText("Transcription complete! Review or send to Thena.");
       await loadSessions();
     } catch (err: unknown) {
       console.error("Transcription error:", err);
@@ -501,13 +501,35 @@ export function App() {
 
       if (response.ok) {
         const result = await response.json();
-        setActiveSession((prev) => (prev ? { ...prev, aiReply: result.reply } : null));
+        const replyText = result.reply || "Recorded and processed by Thena.";
+        setActiveSession((prev) => (prev ? { ...prev, aiReply: replyText } : null));
         setStatusText("Response received & memory stored!");
+
+        // Add real exchange to conversation stream
+        const userPrompt = activeSession.editedText || activeSession.originalText || "Voice prompt";
+        setChatMessages((prev) => [
+          ...prev,
+          {
+            id: `user-${Date.now()}`,
+            sender: "user",
+            senderName: "User",
+            timestamp: "Just now",
+            text: userPrompt,
+          },
+          {
+            id: `asst-${Date.now()}`,
+            sender: "assistant",
+            senderName: "Thena",
+            timestamp: "Just now",
+            text: replyText,
+          },
+        ]);
+
         await Promise.all([loadMemoryData(), loadAnalytics(), loadMyDay()]);
       }
     } catch (err) {
-      console.error("AI processing error:", err);
-      setStatusText("Failed to process with AI.");
+      console.error("Thena processing error:", err);
+      setStatusText("Failed to process with Thena.");
     } finally {
       setIsProcessing(false);
     }
@@ -693,39 +715,11 @@ export function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showFullOrbView, setShowFullOrbView] = useState(false);
   const [bottomInputText, setBottomInputText] = useState("");
-  const [recentActiveId, setRecentActiveId] = useState("build-personal-ai");
+  const [recentActiveId, setRecentActiveId] = useState("");
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const chatScrollAnchorRef = useRef<HTMLDivElement>(null);
 
-  const recentChats = [
-    { id: "build-personal-ai", title: "Build Personal AI" },
-    { id: "ccda-study-help", title: "CC&DA Study Help" },
-    { id: "cooking-chicken-breast", title: "Cooking Chicken Breast" },
-    { id: "pwa-examples", title: "Progress Web App Examples" },
-    { id: "ppt-outline-js", title: "PPT Outline for JS Service" },
-  ];
-
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: "initial-plan",
-      sender: "assistant",
-      senderName: "Thena",
-      timestamp: "Just now",
-      text: `### Design Enhancement Plan for the Chatbot Voice Interface
-
-To make the chatbot's voice screen look like the provided reference (dark background, waveform, minimal controls) and improve its usability, we'll follow these steps:
-
-#### 1. Gather High-Quality References
-- **Collect similar UI examples:** Search for high-resolution images of dark-themed voice assistant or chatbot interfaces. Look for designs with animated waveforms, circular microphone buttons, and translucent panels. Use sources like Dribbble, Behance, or Uplabs.
-- **Analyze style:** Note the overall look and feel: black or near-black background, subtle gradients, minimal clutter, and accent colors for highlights. Pay attention to how text, icons, and panels are arranged.
-
-#### 2. Define Color Palette and Typography
-- **Curated Palette:** Pure OLED Black (\`#000000\`), obsidian panels (\`#08060f\`), and radiant lavender highlights (\`#c084fc\`, \`#a855f7\`).
-- **Typography:** Modern clean system typography with high visual contrast and legibility.
-
-I've updated the Deep Research task with your new design reference. It will focus on a step-by-step Antigravity workflow to refine your existing chatbot UI, including the glowing lavender orb, immersive listening screen, chat history, gradients, animations, and responsive layout—without rebuilding your backend or existing features.`,
-    },
-  ]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
   const handleCopyMessage = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -850,7 +844,8 @@ I've updated the Deep Research task with your new design reference. It will focu
           onClick={() => {
             switchTab("voice");
             setActiveSession(null);
-            setRecentActiveId("new-session");
+            setChatMessages([]);
+            setRecentActiveId("");
           }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -886,38 +881,48 @@ I've updated the Deep Research task with your new design reference. It will focu
           <span>Recents</span>
         </div>
         <div className="sidebar-recents-list">
-          {recentChats.map((rc) => (
-            <button
-              key={rc.id}
-              className={`recent-item-btn ${recentActiveId === rc.id ? "active" : ""}`}
-              onClick={() => {
-                setRecentActiveId(rc.id);
-                switchTab("voice");
-              }}
-              title={rc.title}
-            >
-              {rc.title}
-            </button>
-          ))}
-          {sessions.slice(0, 6).map((s) => (
-            <button
-              key={`sess-${s.session_id}`}
-              className={`recent-item-btn ${activeSession?.sessionId === s.session_id ? "active" : ""}`}
-              onClick={() => {
-                switchTab("voice");
-                setActiveSession({
-                  sessionId: s.session_id,
-                  originalText: s.original_text || "",
-                  editedText: s.edited_text || s.original_text || "",
-                  audioUrl: s.audio_url || "",
-                  aiReply: "",
-                });
-              }}
-              title={`Voice Session #${s.session_id}`}
-            >
-              🎙️ Session #{s.session_id}
-            </button>
-          ))}
+          {sessions.length === 0 && (
+            <div style={{ padding: "8px 12px", fontSize: "0.75rem", color: "#6b5d7d" }}>
+              No recent voice sessions
+            </div>
+          )}
+          {sessions.map((s) => {
+            const previewText = (s.edited_text || s.original_text || `Voice Session #${s.session_id}`).trim();
+            const truncated = previewText.length > 28 ? previewText.slice(0, 28) + "..." : previewText;
+            const isSelected = recentActiveId === `sess-${s.session_id}` || activeSession?.sessionId === s.session_id;
+
+            return (
+              <button
+                key={`sess-${s.session_id}`}
+                className={`recent-item-btn ${isSelected ? "active" : ""}`}
+                onClick={() => {
+                  switchTab("voice");
+                  setActiveSession({
+                    sessionId: s.session_id,
+                    originalText: s.original_text || "",
+                    editedText: s.edited_text || s.original_text || "",
+                    audioUrl: s.audio_url || "",
+                    aiReply: "",
+                  });
+                  const msgs: ChatMessage[] = [];
+                  if (s.original_text || s.edited_text) {
+                    msgs.push({
+                      id: `user-${s.session_id}`,
+                      sender: "user",
+                      senderName: "User",
+                      timestamp: s.created_at ? new Date(s.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Saved",
+                      text: s.edited_text || s.original_text || "",
+                    });
+                  }
+                  setChatMessages(msgs);
+                  setRecentActiveId(`sess-${s.session_id}`);
+                }}
+                title={previewText}
+              >
+                🎙️ {truncated}
+              </button>
+            );
+          })}
         </div>
 
         <div className="sidebar-footer">
@@ -1015,6 +1020,49 @@ I've updated the Deep Research task with your new design reference. It will focu
                   setActiveSession={setActiveSession}
                   onSendMessage={handleSendDirectPrompt}
                 />
+              )}
+
+              {/* Clean Welcome Hero when no messages */}
+              {chatMessages.length === 0 && (
+                <div className="chat-welcome-hero">
+                  <div className="welcome-avatar-orb">T</div>
+                  <h1 className="welcome-title">How can Thena help you today?</h1>
+                  <p className="welcome-sub">
+                    Click the orb to speak, or type a request in the message capsule below.
+                  </p>
+                  <div className="welcome-suggestions-grid">
+                    <button
+                      className="welcome-suggestion-card"
+                      onClick={() => handleSendQueryToAI("What are my priority tasks for today?")}
+                    >
+                      <span className="card-icon">⚡</span>
+                      <div>
+                        <div className="card-headline">Check Daily Plan</div>
+                        <div className="card-desc">Review tasks & recommended next action</div>
+                      </div>
+                    </button>
+                    <button
+                      className="welcome-suggestion-card"
+                      onClick={() => handleSendQueryToAI("Summarize my recent memory logs and facts.")}
+                    >
+                      <span className="card-icon">🧠</span>
+                      <div>
+                        <div className="card-headline">Review Memory</div>
+                        <div className="card-desc">Search personal timeline and facts</div>
+                      </div>
+                    </button>
+                    <button
+                      className="welcome-suggestion-card"
+                      onClick={() => handleSendQueryToAI("Give me a summary of my weight and gym progress.")}
+                    >
+                      <span className="card-icon">📊</span>
+                      <div>
+                        <div className="card-headline">Health & Trackers</div>
+                        <div className="card-desc">Analyze trends and analytics</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
               )}
 
               {/* Message Cards Stream */}
