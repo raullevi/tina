@@ -1,0 +1,120 @@
+/* ==========================================================================
+   Rolling Dial Navigation — 3D Cylindrical Wheel Picker (Mobile View)
+   ========================================================================== */
+
+.rolling-dial-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 390px;
+  margin: 0 auto 16px;
+  background: rgba(13, 9, 23, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(192, 132, 252, 0.2);
+  border-radius: 30px;
+  padding: 6px 12px;
+  box-shadow: 
+    0 10px 28px rgba(0, 0, 0, 0.7),
+    0 0 20px rgba(168, 85, 247, 0.12),
+    inset 0 0 2px rgba(192, 132, 252, 0.3);
+  position: relative;
+  user-select: none;
+  overflow: hidden;
+}
+
+.dial-viewport {
+  flex: 1;
+  height: 52px;
+  position: relative;
+  perspective: 550px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.dial-indicator-frame {
+  position: absolute;
+  width: 110px;
+  height: 38px;
+  border-radius: 18px;
+  background: rgba(168, 85, 247, 0.18);
+  border: 1px solid rgba(192, 132, 252, 0.45);
+  box-shadow: 0 0 16px rgba(192, 132, 252, 0.25);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.dial-drum {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dial-drum.dragging {
+  transition: none;
+}
+
+.dial-item {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #a79bb5;
+}
+
+.dial-item.active {
+  color: #ffffff;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(192, 132, 252, 0.8);
+}
+
+.dial-item-icon {
+  font-size: 1rem;
+}
+
+.dial-item-label {
+  letter-spacing: -0.01em;
+}
+
+/* Arrow Navigation Buttons */
+.dial-arrow-btn {
+  background: transparent;
+  border: none;
+  color: #c084fc;
+  font-size: 1.3rem;
+  font-weight: 700;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.dial-arrow-btn:hover {
+  background: rgba(192, 132, 252, 0.15);
+  transform: scale(1.15);
+  color: #ffffff;
+}
+
+.dial-arrow-btn:active {
+  transform: scale(0.9);
+}

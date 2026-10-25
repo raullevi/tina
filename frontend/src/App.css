@@ -848,3 +848,238 @@
 .transcript-textarea:focus {
   border-color: #c084fc;
 }
+
+/* ==========================================================================
+   Sliding Door Navigation (PC / Desktop View)
+   ========================================================================== */
+
+.slider-door-trigger-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(13, 9, 23, 0.85);
+  border: 1px solid rgba(192, 132, 252, 0.2);
+  border-radius: 20px;
+  padding: 8px 16px;
+  color: #f3e8ff;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.slider-door-trigger-btn:hover {
+  background: rgba(192, 132, 252, 0.12);
+  border-color: #c084fc;
+  box-shadow: 0 0 16px rgba(192, 132, 252, 0.25);
+  transform: translateY(-1px);
+}
+
+.door-icon-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 16px;
+}
+
+.door-icon-bars .bar {
+  height: 2px;
+  background: #c084fc;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.door-icon-bars .bar-t { width: 100%; }
+.door-icon-bars .bar-m { width: 75%; }
+.door-icon-bars .bar-b { width: 50%; }
+
+.slider-door-trigger-btn:hover .door-icon-bars .bar-m { width: 100%; }
+.slider-door-trigger-btn:hover .door-icon-bars .bar-b { width: 100%; }
+
+.door-label {
+  letter-spacing: -0.01em;
+}
+
+/* Sliding Door Backdrop Overlay */
+.slider-door-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 2, 6, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 998;
+  animation: fadeInBackdrop 0.3s ease-out;
+}
+
+@keyframes fadeInBackdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Sliding Door Main Panel */
+.slider-door-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 360px;
+  max-width: 85vw;
+  background: rgba(9, 6, 16, 0.96);
+  backdrop-filter: blur(35px);
+  -webkit-backdrop-filter: blur(35px);
+  border-right: 1px solid rgba(192, 132, 252, 0.22);
+  box-shadow: 
+    20px 0 60px rgba(0, 0, 0, 0.85),
+    0 0 40px rgba(168, 85, 247, 0.15);
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateX(-100%);
+}
+
+.slider-door-panel.open {
+  transform: translateX(0);
+}
+
+.door-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(192, 132, 252, 0.12);
+}
+
+.door-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.door-close-btn {
+  background: rgba(192, 132, 252, 0.08);
+  border: 1px solid rgba(192, 132, 252, 0.15);
+  color: #a79bb5;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.door-close-btn:hover {
+  background: rgba(192, 132, 252, 0.25);
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+.door-status-box {
+  background: rgba(192, 132, 252, 0.06);
+  border: 1px solid rgba(192, 132, 252, 0.14);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 18px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: #e9d5ff;
+}
+
+.door-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.door-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(192, 132, 252, 0.08);
+  border-radius: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+}
+
+.door-nav-item:hover {
+  background: rgba(192, 132, 252, 0.12);
+  border-color: rgba(192, 132, 252, 0.3);
+  transform: translateX(4px);
+}
+
+.door-nav-item.active {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(126, 34, 206, 0.1) 100%);
+  border-color: #c084fc;
+  box-shadow: 0 0 18px rgba(192, 132, 252, 0.2);
+}
+
+.door-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.door-item-icon {
+  font-size: 1.25rem;
+}
+
+.door-item-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.door-item-desc {
+  font-size: 0.72rem;
+  color: #a79bb5;
+  margin-top: 2px;
+}
+
+.door-item-arrow {
+  color: #c084fc;
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.door-footer {
+  padding-top: 16px;
+  border-top: 1px solid rgba(192, 132, 252, 0.1);
+  font-size: 0.72rem;
+  color: #7d6e8c;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Responsive behavior */
+.mobile-only {
+  display: none;
+}
+
+.desktop-only {
+  display: flex;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: flex;
+  }
+  .desktop-only {
+    display: none;
+  }
+  .app-header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}

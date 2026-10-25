@@ -1,4 +1,6 @@
 import { VoicePhoneView } from "./components/VoicePhoneView";
+import { RollingDialNav } from "./components/RollingDialNav";
+import type { NavItem } from "./components/RollingDialNav";
 import { useState, useEffect, useRef } from "react";
 import {
   ResponsiveContainer,
@@ -132,10 +134,31 @@ interface WeeklyReport {
 
 const BACKEND_BASE = "http://localhost:8000";
 
+const NAV_ITEMS: NavItem[] = [
+  { id: "voice", label: "Voice", icon: "🎙️", desc: "OLED Voice Hub" },
+  { id: "myday", label: "My Day", icon: "⚡", desc: "Daily Plan & Next Action" },
+  { id: "lifetree", label: "Life Tree", icon: "🌳", desc: "Life Clusters Hierarchy" },
+  { id: "research", label: "Research", icon: "🔍", desc: "Source-Backed Q&A" },
+  { id: "trackers", label: "Trackers", icon: "📊", desc: "Pandas Charts & Analytics" },
+  { id: "memory", label: "Memory", icon: "🧠", desc: "Personal Memory Vault" },
+];
+
 export function App() {
   const [activeTab, setActiveTab] = useState<
     "voice" | "myday" | "lifetree" | "research" | "trackers" | "memory"
   >("voice");
+  const [isSliderDoorOpen, setIsSliderDoorOpen] = useState(false);
+
+  const switchTab = (tabId: string) => {
+    setActiveTab(tabId as any);
+    setIsSliderDoorOpen(false);
+    if (tabId === "myday") loadMyDay();
+    if (tabId === "lifetree") loadLifeTree();
+    if (tabId === "research") loadDocuments();
+    if (tabId === "trackers") loadAnalytics();
+    if (tabId === "memory") loadMemoryData();
+  };
+
 
   // System status
   const [backendOnline, setBackendOnline] = useState(false);
@@ -611,59 +634,19 @@ export function App() {
           </div>
         </div>
 
-        <nav className="nav-tabs">
-          <button
-            className={`tab-btn ${activeTab === "voice" ? "active" : ""}`}
-            onClick={() => setActiveTab("voice")}
-          >
-            Voice
-          </button>
-          <button
-            className={`tab-btn ${activeTab === "myday" ? "active" : ""}`}
-            onClick={() => {
-              setActiveTab("myday");
-              loadMyDay();
-            }}
-          >
-            My Day
-          </button>
-          <button
-            className={`tab-btn ${activeTab === "lifetree" ? "active" : ""}`}
-            onClick={() => {
-              setActiveTab("lifetree");
-              loadLifeTree();
-            }}
-          >
-            Life Tree
-          </button>
-          <button
-            className={`tab-btn ${activeTab === "research" ? "active" : ""}`}
-            onClick={() => {
-              setActiveTab("research");
-              loadDocuments();
-            }}
-          >
-            Research
-          </button>
-          <button
-            className={`tab-btn ${activeTab === "trackers" ? "active" : ""}`}
-            onClick={() => {
-              setActiveTab("trackers");
-              loadAnalytics();
-            }}
-          >
-            Trackers
-          </button>
-          <button
-            className={`tab-btn ${activeTab === "memory" ? "active" : ""}`}
-            onClick={() => {
-              setActiveTab("memory");
-              loadMemoryData();
-            }}
-          >
-            Memory
-          </button>
-        </nav>
+        {/* PC: Slider Door Trigger Button */}
+        <button
+          className="slider-door-trigger-btn desktop-only"
+          onClick={() => setIsSliderDoorOpen(true)}
+          title="Open Slider Door Navigation"
+        >
+          <span className="door-icon-bars">
+            <span className="bar bar-t" />
+            <span className="bar bar-m" />
+            <span className="bar bar-b" />
+          </span>
+          <span className="door-label">Door Navigation</span>
+        </button>
 
         <div className="status-badges">
           <div className="badge">
@@ -676,10 +659,83 @@ export function App() {
           </div>
         </div>
       </header>
+      {/* Mobile: 3D Rolling Dial Navigation */}
+      <div className="mobile-only" style={{ width: "100%", justifyContent: "center" }}>
+        <RollingDialNav
+          items={NAV_ITEMS}
+          activeId={activeTab}
+          onSelect={switchTab}
+        />
+      </div>
+
+      {/* PC: Slider Door Panel & Backdrop */}
+      {isSliderDoorOpen && (
+        <div
+          className="slider-door-backdrop"
+          onClick={() => setIsSliderDoorOpen(false)}
+        />
+      )}
+
+      <aside className={`slider-door-panel ${isSliderDoorOpen ? "open" : ""}`}>
+        <div className="door-header">
+          <div className="door-brand">
+            <div className="brand-logo">T</div>
+            <div>
+              <div className="brand-title">THENA</div>
+              <div className="brand-subtitle">Sliding Door Navigation</div>
+            </div>
+          </div>
+          <button
+            className="door-close-btn"
+            onClick={() => setIsSliderDoorOpen(false)}
+            title="Close Door"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="door-status-box">
+          <span className="badge-dot" />
+          <span>Meta Llama 3.1 8B • Metal GPU Accelerated</span>
+        </div>
+
+        <div className="door-items-list">
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              className={`door-nav-item ${activeTab === item.id ? "active" : ""}`}
+              onClick={() => switchTab(item.id)}
+            >
+              <div className="door-item-left">
+                <span className="door-item-icon">{item.icon}</span>
+                <div>
+                  <div className="door-item-title">{item.label}</div>
+                  <div className="door-item-desc">{item.desc}</div>
+                </div>
+              </div>
+              <span className="door-item-arrow">›</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="door-footer">
+          <span>Local SQLite • Zero Cloud</span>
+          <span>v0.4.0</span>
+        </div>
+      </aside>
+
 
       {/* VIEW 1: Voice Assistant (Luxury OLED Mobile Interface) */}
       {activeTab === "voice" && (
-        <VoicePhoneView
+        <>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "8px" }}>
+            <RollingDialNav
+              items={NAV_ITEMS}
+              activeId={activeTab}
+              onSelect={switchTab}
+            />
+          </div>
+          <VoicePhoneView
           isRecording={isRecording}
           statusText={statusText}
           toggleRecording={toggleRecording}
@@ -691,15 +747,9 @@ export function App() {
           isProcessing={isProcessing}
           setActiveSession={setActiveSession}
           onSendMessage={handleSendDirectPrompt}
-          onNavigateTab={(tab) => {
-            setActiveTab(tab as any);
-            if (tab === "myday") loadMyDay();
-            if (tab === "lifetree") loadLifeTree();
-            if (tab === "research") loadDocuments();
-            if (tab === "trackers") loadAnalytics();
-            if (tab === "memory") loadMemoryData();
-          }}
+          onNavigateTab={switchTab}
         />
+        </>
       )}
 
       {/* VIEW 2: My Day (Daily Plan & Next Action) */}
