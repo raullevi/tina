@@ -1,5 +1,4 @@
 import { VoiceDesktopView } from "./components/VoiceDesktopView";
-import { RollingDialNav } from "./components/RollingDialNav";
 import type { NavItem } from "./components/RollingDialNav";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -134,6 +133,77 @@ interface WeeklyReport {
 
 const BACKEND_BASE = "http://localhost:8000";
 
+
+interface ChatMessage {
+  id: string;
+  sender: 'user' | 'assistant';
+  senderName: string;
+  text: string;
+  timestamp: string;
+}
+
+function renderMarkdown(content: string) {
+  const lines = content.split("\n");
+  const elements: React.ReactNode[] = [];
+  let currentList: string[] = [];
+
+  const flushList = () => {
+    if (currentList.length > 0) {
+      elements.push(
+        <ul key={"ul-" + elements.length} className="msg-ul">
+          {currentList.map((item, idx) => (
+            <li key={idx} dangerouslySetInnerHTML={{ __html: formatInline(item) }} />
+          ))}
+        </ul>
+      );
+      currentList = [];
+    }
+  };
+
+  const formatInline = (str: string) => {
+    return str
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+  };
+
+  lines.forEach((line, i) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushList();
+      return;
+    }
+    if (trimmed.startsWith("# ")) {
+      flushList();
+      elements.push(<h1 key={"h1-" + i}>{trimmed.slice(2)}</h1>);
+    } else if (trimmed.startsWith("## ")) {
+      flushList();
+      elements.push(<h2 key={"h2-" + i}>{trimmed.slice(3)}</h2>);
+    } else if (trimmed.startsWith("### ")) {
+      flushList();
+      elements.push(<h3 key={"h3-" + i}>{trimmed.slice(4)}</h3>);
+    } else if (trimmed.startsWith("#### ")) {
+      flushList();
+      elements.push(<h4 key={"h4-" + i} style={{ color: "#c084fc", margin: "14px 0 6px" }}>{trimmed.slice(5)}</h4>);
+    } else if (/^[0-9]+\.\s/.test(trimmed)) {
+      flushList();
+      elements.push(
+        <div key={"num-" + i} className="msg-step-title" style={{ fontWeight: 700, margin: "12px 0 6px", color: "#ffffff" }}>
+          {trimmed}
+        </div>
+      );
+    } else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+      currentList.push(trimmed.slice(2));
+    } else {
+      flushList();
+      elements.push(
+        <p key={"p-" + i} dangerouslySetInnerHTML={{ __html: formatInline(trimmed) }} />
+      );
+    }
+  });
+  flushList();
+  return elements;
+}
+
 const NAV_ITEMS: NavItem[] = [
   { id: "voice", label: "Voice", icon: "🎙️", desc: "OLED Voice Hub" },
   { id: "myday", label: "My Day", icon: "⚡", desc: "Daily Plan & Next Action" },
@@ -147,11 +217,8 @@ export function App() {
   const [activeTab, setActiveTab] = useState<
     "voice" | "myday" | "lifetree" | "research" | "trackers" | "memory"
   >("voice");
-  const [isSliderDoorOpen, setIsSliderDoorOpen] = useState(false);
-
   const switchTab = (tabId: string) => {
     setActiveTab(tabId as any);
-    setIsSliderDoorOpen(false);
     if (tabId === "myday") loadMyDay();
     if (tabId === "lifetree") loadLifeTree();
     if (tabId === "research") loadDocuments();
@@ -622,125 +689,392 @@ export function App() {
     }
   };
 
+  // ChatGPT Desktop states
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [showFullOrbView, setShowFullOrbView] = useState(false);
+  const [bottomInputText, setBottomInputText] = useState("");
+  const [recentActiveId, setRecentActiveId] = useState("build-personal-ai");
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const chatScrollAnchorRef = useRef<HTMLDivElement>(null);
+
+  const recentChats = [
+    { id: "build-personal-ai", title: "Build Personal AI" },
+    { id: "ccda-study-help", title: "CC&DA Study Help" },
+    { id: "cooking-chicken-breast", title: "Cooking Chicken Breast" },
+    { id: "pwa-examples", title: "Progress Web App Examples" },
+    { id: "ppt-outline-js", title: "PPT Outline for JS Service" },
+  ];
+
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      id: "initial-plan",
+      sender: "assistant",
+      senderName: "Thena",
+      timestamp: "Just now",
+      text: `### Design Enhancement Plan for the Chatbot Voice Interface
+
+To make the chatbot's voice screen look like the provided reference (dark background, waveform, minimal controls) and improve its usability, we'll follow these steps:
+
+#### 1. Gather High-Quality References
+- **Collect similar UI examples:** Search for high-resolution images of dark-themed voice assistant or chatbot interfaces. Look for designs with animated waveforms, circular microphone buttons, and translucent panels. Use sources like Dribbble, Behance, or Uplabs.
+- **Analyze style:** Note the overall look and feel: black or near-black background, subtle gradients, minimal clutter, and accent colors for highlights. Pay attention to how text, icons, and panels are arranged.
+
+#### 2. Define Color Palette and Typography
+- **Curated Palette:** Pure OLED Black (\`#000000\`), obsidian panels (\`#08060f\`), and radiant lavender highlights (\`#c084fc\`, \`#a855f7\`).
+- **Typography:** Modern clean system typography with high visual contrast and legibility.
+
+I've updated the Deep Research task with your new design reference. It will focus on a step-by-step Antigravity workflow to refine your existing chatbot UI, including the glowing lavender orb, immersive listening screen, chat history, gradients, animations, and responsive layout—without rebuilding your backend or existing features.`,
+    },
+  ]);
+
+  const handleCopyMessage = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopyFeedback("Copied to clipboard!");
+    setTimeout(() => setCopyFeedback(null), 2000);
+  };
+
+  const handleSpeakMessage = (text: string) => {
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const clean = text.replace(/[#*`]/g, "");
+      const utterance = new SpeechSynthesisUtterance(clean);
+      utterance.pitch = 1.0;
+      utterance.rate = 1.05;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const handleSendQueryToAI = async (text: string) => {
+    if (!text.trim()) return;
+    const userMsg: ChatMessage = {
+      id: `user-${Date.now()}`,
+      sender: "user",
+      senderName: "User",
+      timestamp: "Just now",
+      text: text,
+    };
+    setChatMessages((prev) => [...prev, userMsg]);
+    setIsProcessing(true);
+
+    try {
+      const res = await fetch(`${BACKEND_BASE}/api/research/query`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: text }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const reply = data.answer || "Recorded and processed by Thena.";
+        const assistantMsg: ChatMessage = {
+          id: `asst-${Date.now()}`,
+          sender: "assistant",
+          senderName: "Thena",
+          timestamp: "Just now",
+          text: reply,
+        };
+        setChatMessages((prev) => [...prev, assistantMsg]);
+      } else {
+        const fallbackMsg: ChatMessage = {
+          id: `asst-${Date.now()}`,
+          sender: "assistant",
+          senderName: "Thena",
+          timestamp: "Just now",
+          text: "I processed your request and updated your local life OS context.",
+        };
+        setChatMessages((prev) => [...prev, fallbackMsg]);
+      }
+    } catch (err) {
+      console.error("AI query error:", err);
+    } finally {
+      setIsProcessing(false);
+      setTimeout(() => {
+        chatScrollAnchorRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
+  };
+
+  const handleRetryAssistant = async () => {
+    const lastUserMsg = [...chatMessages].reverse().find((m) => m.sender === "user");
+    if (lastUserMsg) {
+      await handleSendQueryToAI(lastUserMsg.text);
+    } else {
+      await handleSendQueryToAI("Can you summarize what you can do for me?");
+    }
+  };
+
+  const handleSendBottomCapsule = async () => {
+    if (!bottomInputText.trim() || isProcessing) return;
+    const prompt = bottomInputText.trim();
+    setBottomInputText("");
+    if (activeTab !== "voice") {
+      setActiveTab("voice");
+    }
+    await handleSendQueryToAI(prompt);
+  };
+
   return (
-    <div className="app-container">
-      {/* Header & Navigation */}
-      <header className="app-header">
-        <div className="brand">
-          <div className="brand-logo">T</div>
-          <div>
-            <div className="brand-title">THENA</div>
-            <div className="brand-subtitle">Voice-First Personal Life OS</div>
+    <div className="chatgpt-app">
+      {/* Left Sidebar (ChatGPT Desktop Style) */}
+      <aside className={`chatgpt-sidebar ${isSidebarOpen ? "" : "collapsed"}`}>
+        <div className="sidebar-top-bar">
+          <div className="sidebar-brand-title">
+            <div className="sidebar-logo-icon">T</div>
+            <span>Thena</span>
+          </div>
+          <div className="sidebar-top-actions">
+            <button
+              className="sidebar-icon-btn"
+              title="Search memory"
+              onClick={() => switchTab("memory")}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </button>
+            <button
+              className="sidebar-icon-btn"
+              title="Close sidebar"
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <line x1="9" y1="3" x2="9" y2="21" />
+              </svg>
+            </button>
           </div>
         </div>
 
-        {/* PC: Slider Door Trigger Button */}
         <button
-          className="slider-door-trigger-btn desktop-only"
-          onClick={() => setIsSliderDoorOpen(true)}
-          title="Open Slider Door Navigation"
+          className="sidebar-new-chat-btn"
+          onClick={() => {
+            switchTab("voice");
+            setActiveSession(null);
+            setRecentActiveId("new-session");
+          }}
         >
-          <span className="door-icon-bars">
-            <span className="bar bar-t" />
-            <span className="bar bar-m" />
-            <span className="bar bar-b" />
-          </span>
-          <span className="door-label">Door Navigation</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+          </svg>
+          <span>New chat</span>
         </button>
 
-        <div className="status-badges">
-          <div className="badge">
-            <span className={`badge-dot ${backendOnline ? "" : "offline"}`} />
-            <span>FastAPI</span>
-          </div>
-          <div className="badge">
-            <span className={`badge-dot ${ollamaOnline ? "" : "offline"}`} />
-            <span>Llama 3.1 8B</span>
-          </div>
-        </div>
-      </header>
-      {/* Mobile: 3D Rolling Dial Navigation */}
-      <div className="mobile-only" style={{ width: "100%", justifyContent: "center" }}>
-        <RollingDialNav
-          items={NAV_ITEMS}
-          activeId={activeTab}
-          onSelect={switchTab}
-        />
-      </div>
-
-      {/* PC: Slider Door Panel & Backdrop */}
-      {isSliderDoorOpen && (
-        <div
-          className="slider-door-backdrop"
-          onClick={() => setIsSliderDoorOpen(false)}
-        />
-      )}
-
-      <aside className={`slider-door-panel ${isSliderDoorOpen ? "open" : ""}`}>
-        <div className="door-header">
-          <div className="door-brand">
-            <div className="brand-logo">T</div>
-            <div>
-              <div className="brand-title">THENA</div>
-              <div className="brand-subtitle">Sliding Door Navigation</div>
-            </div>
-          </div>
-          <button
-            className="door-close-btn"
-            onClick={() => setIsSliderDoorOpen(false)}
-            title="Close Door"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="door-status-box">
-          <span className="badge-dot" />
-          <span>Meta Llama 3.1 8B • Metal GPU Accelerated</span>
-        </div>
-
-        <div className="door-items-list">
+        <div className="sidebar-nav-list">
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
-              className={`door-nav-item ${activeTab === item.id ? "active" : ""}`}
+              className={`sidebar-nav-item ${activeTab === item.id ? "active" : ""}`}
               onClick={() => switchTab(item.id)}
             >
-              <div className="door-item-left">
-                <span className="door-item-icon">{item.icon}</span>
-                <div>
-                  <div className="door-item-title">{item.label}</div>
-                  <div className="door-item-desc">{item.desc}</div>
-                </div>
-              </div>
-              <span className="door-item-arrow">›</span>
+              <span className="sidebar-item-icon">{item.icon}</span>
+              <span>{item.label}</span>
             </button>
           ))}
         </div>
 
-        <div className="door-footer">
-          <span>Local SQLite • Zero Cloud</span>
-          <span>v0.4.0</span>
+        <div className="sidebar-section-header">
+          <span>Pinned</span>
+          <span>›</span>
+        </div>
+        <div className="sidebar-section-header">
+          <span>Projects</span>
+          <span>›</span>
+        </div>
+
+        <div className="sidebar-section-header" style={{ marginTop: "10px" }}>
+          <span>Recents</span>
+        </div>
+        <div className="sidebar-recents-list">
+          {recentChats.map((rc) => (
+            <button
+              key={rc.id}
+              className={`recent-item-btn ${recentActiveId === rc.id ? "active" : ""}`}
+              onClick={() => {
+                setRecentActiveId(rc.id);
+                switchTab("voice");
+              }}
+              title={rc.title}
+            >
+              {rc.title}
+            </button>
+          ))}
+          {sessions.slice(0, 6).map((s) => (
+            <button
+              key={`sess-${s.session_id}`}
+              className={`recent-item-btn ${activeSession?.sessionId === s.session_id ? "active" : ""}`}
+              onClick={() => {
+                switchTab("voice");
+                setActiveSession({
+                  sessionId: s.session_id,
+                  originalText: s.original_text || "",
+                  editedText: s.edited_text || s.original_text || "",
+                  audioUrl: s.audio_url || "",
+                  aiReply: "",
+                });
+              }}
+              title={`Voice Session #${s.session_id}`}
+            >
+              🎙️ Session #{s.session_id}
+            </button>
+          ))}
+        </div>
+
+        <div className="sidebar-footer">
+          <div className="user-profile-row">
+            <div className="user-avatar">👤</div>
+            <div>
+              <div className="user-name">User</div>
+              <div className="user-badge">Apple Silicon M4 • Llama 3.1 8B</div>
+            </div>
+          </div>
         </div>
       </aside>
 
+      {/* Main Content Area */}
+      <main className="chatgpt-main-content">
+        <header className="chatgpt-top-bar">
+          <div className="top-bar-left">
+            {!isSidebarOpen && (
+              <button
+                className="toggle-sidebar-btn"
+                title="Open sidebar"
+                onClick={() => setIsSidebarOpen(true)}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <line x1="9" y1="3" x2="9" y2="21" />
+                </svg>
+              </button>
+            )}
+            <div className="top-bar-title">
+              <span>Thena 3.1 8B</span>
+              <span style={{ fontSize: "0.75rem", color: "#a79bb5" }}>▾</span>
+            </div>
+          </div>
 
-      {/* VIEW 1: Voice Assistant (Native Luxury PC Interface) */}
-      {activeTab === "voice" && (
-        <VoiceDesktopView
-          isRecording={isRecording}
-          statusText={statusText}
-          toggleRecording={toggleRecording}
-          activeSession={activeSession}
-          sessions={sessions}
-          handleSaveTranscript={handleSaveTranscript}
-          handleSendToAI={handleSendToAI}
-          isSaving={isSaving}
-          isProcessing={isProcessing}
-          setActiveSession={setActiveSession}
-          onSendMessage={handleSendDirectPrompt}
-        />
-      )}
+          <div className="top-bar-actions">
+            <div className="badge">
+              <span className={`badge-dot ${backendOnline ? "" : "offline"}`} />
+              <span>FastAPI</span>
+            </div>
+            <div className="badge">
+              <span className={`badge-dot ${ollamaOnline ? "" : "offline"}`} />
+              <span>Llama 3.1 8B</span>
+            </div>
+            <button className="top-action-btn" title="Share Chat">
+              <span>↗</span>
+              <span>Share</span>
+            </button>
+            <button className="top-action-btn" title="Options">
+              <span>•••</span>
+            </button>
+          </div>
+        </header>
+
+        <div className="chatgpt-canvas-body">
+          {/* VIEW 1: Voice & ChatGPT Conversation Canvas */}
+          {activeTab === "voice" && (
+            <div className="chat-conversation-stream">
+              {/* Optional Voice Orb Banner at Top of Chat */}
+              <div className="voice-orb-banner">
+                <div className="voice-orb-left">
+                  <div
+                    className={`voice-orb-mini ${isRecording ? "recording" : ""}`}
+                    onClick={toggleRecording}
+                    title={isRecording ? "Stop voice capture" : "Click to speak with Faster-Whisper"}
+                  />
+                  <div>
+                    <div className="voice-orb-title">
+                      {isRecording ? "Listening to your voice..." : "Voice Assistant • Faster-Whisper"}
+                    </div>
+                    <div className="voice-orb-sub">
+                      {statusText || "Click orb or hold microphone capsule to dictate prompts locally"}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  className="voice-orb-toggle-btn"
+                  onClick={() => setShowFullOrbView(!showFullOrbView)}
+                >
+                  {showFullOrbView ? "Hide Orb Stage" : "Show 3D Orb Stage"}
+                </button>
+              </div>
+
+              {showFullOrbView && (
+                <VoiceDesktopView
+                  isRecording={isRecording}
+                  statusText={statusText}
+                  toggleRecording={toggleRecording}
+                  activeSession={activeSession}
+                  sessions={sessions}
+                  handleSaveTranscript={handleSaveTranscript}
+                  handleSendToAI={handleSendToAI}
+                  isSaving={isSaving}
+                  isProcessing={isProcessing}
+                  setActiveSession={setActiveSession}
+                  onSendMessage={handleSendDirectPrompt}
+                />
+              )}
+
+              {/* Message Cards Stream */}
+              {chatMessages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`chat-message-item ${msg.sender === "user" ? "user-msg" : "assistant-msg"}`}
+                >
+                  <div className="message-avatar">
+                    {msg.sender === "user" ? "👤" : "T"}
+                  </div>
+                  <div className="message-content-wrapper">
+                    <div className="message-sender-name">{msg.senderName}</div>
+                    <div className="message-text-card">
+                      {renderMarkdown(msg.text)}
+                    </div>
+
+                    {msg.sender === "assistant" && (
+                      <div className="assistant-action-toolbar">
+                        <button
+                          className="action-tool-btn"
+                          title="Copy response"
+                          onClick={() => handleCopyMessage(msg.text)}
+                        >
+                          📋
+                        </button>
+                        <button className="action-tool-btn" title="Good response">
+                          👍
+                        </button>
+                        <button className="action-tool-btn" title="Bad response">
+                          👎
+                        </button>
+                        <button
+                          className="action-tool-btn"
+                          title="Read aloud (Listen)"
+                          onClick={() => handleSpeakMessage(msg.text)}
+                        >
+                          🔊
+                        </button>
+                        <button className="action-tool-btn" title="Share">
+                          ↗
+                        </button>
+                        <button
+                          className="action-tool-btn"
+                          title="Regenerate"
+                          onClick={() => handleRetryAssistant()}
+                        >
+                          ↻
+                        </button>
+                        <button className="action-tool-btn" title="More">
+                          •••
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <div ref={chatScrollAnchorRef} />
+            </div>
+          )}
 
       {/* VIEW 2: My Day (Daily Plan & Next Action) */}
       {activeTab === "myday" && (
@@ -1210,6 +1544,63 @@ export function App() {
           </div>
         </section>
       )}
+        </div>
+
+        {/* Sticky Bottom Floating Bar (ChatGPT Style) */}
+        <footer className="chatgpt-bottom-floating-bar">
+          <form
+            className="floating-input-capsule"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendBottomCapsule();
+            }}
+          >
+            <button
+              type="button"
+              className="capsule-plus-btn"
+              title="Add attachment or tools"
+              onClick={() => switchTab("research")}
+            >
+              +
+            </button>
+            <input
+              type="text"
+              className="capsule-text-input"
+              placeholder="Message Thena..."
+              value={bottomInputText}
+              onChange={(e) => setBottomInputText(e.target.value)}
+              disabled={isProcessing}
+            />
+            <div className="capsule-actions">
+              <button
+                type="button"
+                className={`capsule-mic-btn ${isRecording ? "recording" : ""}`}
+                onClick={toggleRecording}
+                title={isRecording ? "Stop Recording" : "Speak to Thena (Faster-Whisper)"}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                  <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                </svg>
+              </button>
+              <button
+                type="submit"
+                className="capsule-send-btn"
+                title="Send message"
+                disabled={!bottomInputText.trim() || isProcessing}
+              >
+                ↑
+              </button>
+            </div>
+          </form>
+
+          <div className="floating-disclaimer-text">
+            Thena can make mistakes. Check important info. Running locally on Apple Silicon M4 • llama3.1:8b.
+          </div>
+        </footer>
+
+        {copyFeedback && <div className="copy-toast">{copyFeedback}</div>}
+      </main>
     </div>
   );
 }
