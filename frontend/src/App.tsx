@@ -1,4 +1,5 @@
 import { VoiceDesktopView } from "./components/VoiceDesktopView";
+import { CreateTaskModal } from "./components/CreateTaskModal";
 import type { NavItem } from "./components/RollingDialNav";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -318,6 +319,7 @@ export function App() {
   // My Day states
   const [dueTasks, setDueTasks] = useState<DueTask[]>([]);
   const [nextAction, setNextAction] = useState<NextAction | null>(null);
+  const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
 
   // Life Tree states
   const [lifeTree, setLifeTree] = useState<LifeTreeNode[]>([]);
@@ -1031,6 +1033,20 @@ export function App() {
               <span>Tina</span>
             </div>
           </div>
+
+          <div className="top-bar-right">
+            <button
+              className="top-bar-add-task-btn"
+              onClick={() => setIsCreateTaskModalOpen(true)}
+              title="Manually create a new task"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              <span>Add Task</span>
+            </button>
+          </div>
         </header>
 
         <div className="chatgpt-canvas-body">
@@ -1233,7 +1249,15 @@ export function App() {
 
           <div className="section-header-row">
             <div className="section-title">Today's Schedule & Routines</div>
-            <span className="badge">{dueTasks.filter((t) => t.status === "completed").length} / {dueTasks.length} Completed</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span className="badge">{dueTasks.filter((t) => t.status === "completed").length} / {dueTasks.length} Completed</span>
+              <button
+                className="btn-add-task-inline"
+                onClick={() => setIsCreateTaskModalOpen(true)}
+              >
+                + Add Task
+              </button>
+            </div>
           </div>
 
           <div className="tasks-list">
@@ -1273,7 +1297,15 @@ export function App() {
           <div className="lifetree-grid">
             {/* Cluster Navigation Cards */}
             <div className="clusters-column">
-              <div className="section-title">Life Clusters Hierarchy</div>
+              <div className="section-header-row">
+                <div className="section-title">Life Clusters Hierarchy</div>
+                <button
+                  className="btn-add-task-inline"
+                  onClick={() => setIsCreateTaskModalOpen(true)}
+                >
+                  + Add Task
+                </button>
+              </div>
               <div className="clusters-list">
                 {lifeTree.map((c) => (
                   <div
@@ -1739,6 +1771,18 @@ export function App() {
         </footer>
 
         {copyFeedback && <div className="copy-toast">{copyFeedback}</div>}
+
+        {/* Manual Task Creation Modal (Zero AI, Deterministic Scheduling) */}
+        <CreateTaskModal
+          isOpen={isCreateTaskModalOpen}
+          onClose={() => setIsCreateTaskModalOpen(false)}
+          clusters={lifeTree.map((c) => ({ id: c.id, name: c.name }))}
+          onTaskCreated={() => {
+            loadMyDay();
+            loadLifeTree();
+          }}
+          backendBaseUrl={BACKEND_BASE}
+        />
       </main>
     </div>
   );

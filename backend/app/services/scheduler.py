@@ -147,6 +147,147 @@ class LifeOSService:
         }
 
     @classmethod
+    def create_manual_task(
+        cls,
+        db: Session,
+        title: str,
+        task_type: str = "flexible",
+        primary_cluster_id: Optional[int] = None,
+        primary_cluster_name: Optional[str] = "Health & Fitness",
+        description: Optional[str] = None,
+        priority: str = "medium",
+        due_date: Optional[str] = None,
+        estimated_duration_minutes: Optional[int] = None,
+        schedule: Optional[Dict[str, Any]] = None,
+        linked_goal_ids: Optional[List[int]] = None,
+        dependencies: Optional[List[str]] = None,
+        subtasks: Optional[List[str]] = None,
+        trigger_event: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Manually creates a task without any AI or LLM interpretation.
+        Deterministically configures routine rules, recurrence, deadlines, and task occurrences.
+        """
+        import json
+        cls.ensure_default_clusters(db)
+
+        # 1. Resolve Primary Cluster (by ID or name)
+        cluster = None
+        if primary_cluster_id:
+            cluster = db.query(LifeNode).filter(LifeNode.id == primary_cluster_id).first()
+
+        if not cluster and primary_cluster_name:
+            clean_name = primary_cluster_name.strip()
+            all_clusters = db.query(LifeNode).filter(LifeNode.type == "cluster").all()
+            for c in all_clusters:
+                if c.name.lower() == clean_name.lower():
+                    cluster = c
+                    break
+            if not cluster:
+                cluster = LifeNode(
+                    name=clean_name.title(),
+                    type="cluster",
+                    description=f"Cluster for {clean_name.title()}",
+                    importance=1,
+                )
+                db.add(cluster)
+                db.flush()
+
+        if not cluster:
+            cluster = db.query(LifeNode).filter(LifeNode.type == "cluster").first()
+
+        # 2. Determine scheduling parameters according to task type
+        sched = schedule or {}
+        schedule_type = task_type
+        interval_days = None
+        weekday = None
+
+        if task_type == "recurring":
+            freq = sched.get("frequency", "daily")
+            if freq == "interval":
+                schedule_type = "interval"
+                interval_days = sched.get("recurrenceIntervalDays") or 1
+            elif freq == "weekly":
+                schedule_type = "weekly"
+                weekday = sched.get("weekday", 0)
+            else:
+                schedule_type = "daily"
+
+        target_date = date.today()
+        if due_date:
+            try:
+                target_date = date.fromisoformat(due_date.split("T")[0])
+            except Exception:
+                target_date = date.today()
+
+        # 3. Store full type-specific metadata in details JSON
+        metadata = {
+            "description": description or "",
+            "type": task_type,
+            "priority": priority,
+            "createdVia": "manual",
+            "schedule": sched,
+            "linkedGoalIds": linked_goal_ids or [],
+            "dependencies": dependencies or [],
+            "subtasks": subtasks or [],
+            "triggerEvent": trigger_event or "",
+            "createdAt": datetime.utcnow().isoformat(),
+        }
+
+        routine = RoutineRule(
+            node_id=cluster.id,
+            name=title.strip(),
+            schedule_type=schedule_type,
+            interval_days=interval_days,
+            weekday=weekday,
+            duration_minutes=estimated_duration_minutes or 30,
+            details=json.dumps(metadata),
+            enabled=True,
+        )
+        db.add(routine)
+        db.flush()
+
+        # 4. Create initial TaskOccurrence
+        notes_parts = [f"Priority: {priority.upper()}"]
+        if description:
+            notes_parts.append(description)
+        if subtasks:
+            notes_parts.append(f"Subtasks: {len(subtasks)} steps")
+
+        occurrence = TaskOccurrence(
+            routine_id=routine.id,
+            title=title.strip(),
+            due_date=target_date,
+            status="pending",
+            notes=" | ".join(notes_parts),
+        )
+        db.add(occurrence)
+        db.commit()
+        db.refresh(occurrence)
+
+        return {
+            "id": occurrence.id,
+            "routineId": routine.id,
+            "title": occurrence.title,
+            "description": description or "",
+            "type": task_type,
+            "primaryCluster": cluster.name,
+            "primaryClusterId": cluster.id,
+            "priority": priority,
+            "status": occurrence.status,
+            "dueDate": occurrence.due_date.isoformat(),
+            "schedule": sched,
+            "linkedGoalIds": linked_goal_ids or [],
+            "dependencies": dependencies or [],
+            "subtasks": subtasks or [],
+            "estimatedDurationMinutes": routine.duration_minutes,
+            "completionHistory": [],
+            "createdVia": "manual",
+            "createdAt": datetime.utcnow().isoformat(),
+            "updatedAt": datetime.utcnow().isoformat(),
+        }
+
+    @classmethod
     def get_or_generate_due_tasks(cls, db: Session, target_date: Optional[date] = None) -> List[Dict[str, Any]]:
         """Return all tasks due for the specified day (My Day), creating task occurrences if needed."""
         cls.ensure_default_clusters(db)
@@ -158,8 +299,13 @@ class LifeOSService:
 
         for r in routines:
             is_due = False
-            if r.schedule_type == "daily":
+            if r.schedule_type in ("daily", "flexible", "deadline", "event", "project"):
                 is_due = True
+            elif r.schedule_type == "one-time":
+                # One-time tasks are only due if no occurrence exists or if a pending occurrence is on/before today
+                existing = db.query(TaskOccurrence).filter(TaskOccurrence.routine_id == r.id).first()
+                if not existing:
+                    is_due = True
             elif r.schedule_type == "weekly" and r.weekday == weekday:
                 is_due = True
             elif r.schedule_type == "interval" and r.interval_days:

@@ -1282,3 +1282,44 @@ async def create_task_in_cluster_endpoint(
         details=req.details,
     )
 
+
+class CreateManualTaskRequest(BaseModel):
+    title: str = Field(..., min_length=1)
+    description: Optional[str] = None
+    type: str = Field(default="flexible", description="one-time, recurring, event, deadline, project, flexible")
+    primaryClusterId: Optional[int] = None
+    primaryCluster: Optional[str] = "Health & Fitness"
+    priority: str = Field(default="medium", description="low, medium, high")
+    dueDate: Optional[str] = None
+    estimatedDurationMinutes: Optional[int] = None
+    schedule: Optional[Dict[str, Any]] = None
+    linkedGoalIds: List[int] = Field(default_factory=list)
+    dependencies: List[str] = Field(default_factory=list)
+    subtasks: List[str] = Field(default_factory=list)
+    triggerEvent: Optional[str] = None
+
+
+@app.post("/api/tasks/manual", tags=["Life OS"])
+async def create_manual_task_endpoint(
+    req: CreateManualTaskRequest,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Manually creates a task with type-specific configuration. Deterministic, zero LLM calls."""
+    return LifeOSService.create_manual_task(
+        db=db,
+        title=req.title,
+        task_type=req.type,
+        primary_cluster_id=req.primaryClusterId,
+        primary_cluster_name=req.primaryCluster,
+        description=req.description,
+        priority=req.priority,
+        due_date=req.dueDate,
+        estimated_duration_minutes=req.estimatedDurationMinutes,
+        schedule=req.schedule,
+        linked_goal_ids=req.linkedGoalIds,
+        dependencies=req.dependencies,
+        subtasks=req.subtasks,
+        trigger_event=req.triggerEvent,
+    )
+
+

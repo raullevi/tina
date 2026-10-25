@@ -101,3 +101,43 @@ async def test_routines_my_day_and_next_action():
         action_data = action_res.json()
         assert "task" in action_data
         assert "why" in action_data
+
+
+@pytest.mark.asyncio
+async def test_manual_task_creation_all_types():
+    """Test manual task creation flow for flexible, recurring, deadline, and project tasks."""
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Flexible task
+        flex_res = await client.post(
+            "/api/tasks/manual",
+            json={
+                "title": "Organize Bookshelf",
+                "type": "flexible",
+                "primaryCluster": "Personal Life",
+                "priority": "low",
+                "estimatedDurationMinutes": 45,
+            },
+        )
+        assert flex_res.status_code == 200
+        flex_data = flex_res.json()
+        assert flex_data["createdVia"] == "manual"
+        assert flex_data["title"] == "Organize Bookshelf"
+        assert flex_data["type"] == "flexible"
+
+        # 2. Project with subtasks
+        proj_res = await client.post(
+            "/api/tasks/manual",
+            json={
+                "title": "Launch Portfolio Site",
+                "type": "project",
+                "primaryCluster": "Work & Projects",
+                "priority": "high",
+                "subtasks": ["Draft bio", "Upload projects", "Connect domain"],
+            },
+        )
+        assert proj_res.status_code == 200
+        proj_data = proj_res.json()
+        assert len(proj_data["subtasks"]) == 3
+        assert proj_data["primaryCluster"] == "Work & Projects"
+
