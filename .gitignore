@@ -20,14 +20,22 @@ htmlcov/
 *.sqlite
 *.sqlite3
 *.db
+*.db-shm
+*.db-wal
+skim.db*
 
-# Audio recordings & user data (SKIM privacy rule)
+# Audio recordings & user data
 recordings/
 transcripts_raw/
 data/
 *.wav
 *.mp3
 *.m4a
+
+# Frontend dependencies & builds
+frontend/node_modules/
+frontend/dist/
+frontend/.next/
 
 # macOS system files
 .DS_Store

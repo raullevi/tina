@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     debug: bool = False
 
+    # Database Configuration
+    database_url: str = "sqlite:///./skim.db"
+
     # Ollama Local LLM Configuration
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.2:3b"

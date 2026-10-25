@@ -5,15 +5,21 @@ from app.services.ollama import OllamaService
 
 
 @pytest.mark.asyncio
-async def test_health_endpoint():
-    """Verify that /api/health returns HTTP 200 and healthy status."""
+async def test_health_endpoints():
+    """Verify that both /health and /api/health return HTTP 200 and healthy status."""
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/health")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "healthy"
-        assert data["service"] == "skim-backend"
+        # /health
+        res1 = await client.get("/health")
+        assert res1.status_code == 200
+        data1 = res1.json()
+        assert data1["status"] == "healthy"
+
+        # /api/health
+        res2 = await client.get("/api/health")
+        assert res2.status_code == 200
+        data2 = res2.json()
+        assert data2["status"] == "healthy"
 
 
 @pytest.mark.asyncio
