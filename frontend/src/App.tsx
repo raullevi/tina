@@ -205,12 +205,82 @@ function renderMarkdown(content: string) {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: "voice", label: "Voice", icon: "🎙️", desc: "OLED Voice Hub" },
-  { id: "myday", label: "My Day", icon: "⚡", desc: "Daily Plan & Next Action" },
-  { id: "lifetree", label: "Life Tree", icon: "🌳", desc: "Life Clusters Hierarchy" },
-  { id: "research", label: "Research", icon: "🔍", desc: "Source-Backed Q&A" },
-  { id: "trackers", label: "Trackers", icon: "📊", desc: "Pandas Charts & Analytics" },
-  { id: "memory", label: "Memory", icon: "🧠", desc: "Personal Memory Vault" },
+  {
+    id: "voice",
+    label: "Voice",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+        <line x1="12" x2="12" y1="19" y2="22" />
+      </svg>
+    ),
+    desc: "OLED Voice Hub",
+  },
+  {
+    id: "myday",
+    label: "My Day",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+        <path d="m9 16 2 2 4-4" />
+      </svg>
+    ),
+    desc: "Daily Plan & Next Action",
+  },
+  {
+    id: "lifetree",
+    label: "Life Tree",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="5" r="3" />
+        <circle cx="6" cy="19" r="3" />
+        <circle cx="18" cy="19" r="3" />
+        <path d="M12 8v4" />
+        <path d="M12 12a6 6 0 0 0-6 4v3" />
+        <path d="M12 12a6 6 0 0 1 6 4v3" />
+      </svg>
+    ),
+    desc: "Life Clusters Hierarchy",
+  },
+  {
+    id: "research",
+    label: "Research",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+    ),
+    desc: "Source-Backed Q&A",
+  },
+  {
+    id: "trackers",
+    label: "Trackers",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10" />
+        <line x1="12" y1="20" x2="12" y2="4" />
+        <line x1="6" y1="20" x2="6" y2="14" />
+      </svg>
+    ),
+    desc: "Pandas Charts & Analytics",
+  },
+  {
+    id: "memory",
+    label: "Memory",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+        <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+        <line x1="12" y1="22.08" x2="12" y2="12" />
+      </svg>
+    ),
+    desc: "Personal Memory Vault",
+  },
 ];
 
 export function App() {
@@ -812,7 +882,6 @@ export function App() {
       <aside className={`chatgpt-sidebar ${isSidebarOpen ? "" : "collapsed"}`}>
         <div className="sidebar-top-bar">
           <div className="sidebar-brand-title">
-            <div className="sidebar-logo-icon">T</div>
             <span>Thena</span>
           </div>
           <div className="sidebar-top-actions">
@@ -919,7 +988,11 @@ export function App() {
                 }}
                 title={previewText}
               >
-                🎙️ {truncated}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.8 }}>
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                </svg>
+                <span>{truncated}</span>
               </button>
             );
           })}
@@ -927,7 +1000,12 @@ export function App() {
 
         <div className="sidebar-footer">
           <div className="user-profile-row">
-            <div className="user-avatar">👤</div>
+            <div className="user-avatar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </div>
             <div>
               <div className="user-name">User</div>
               <div className="user-badge">Apple Silicon M4 • Llama 3.1 8B</div>
@@ -1025,7 +1103,11 @@ export function App() {
               {/* Clean Welcome Hero when no messages */}
               {chatMessages.length === 0 && (
                 <div className="chat-welcome-hero">
-                  <div className="welcome-avatar-orb">T</div>
+                  <div className="welcome-avatar-orb">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+                    </svg>
+                  </div>
                   <h1 className="welcome-title">How can Thena help you today?</h1>
                   <p className="welcome-sub">
                     Click the orb to speak, or type a request in the message capsule below.
@@ -1035,7 +1117,15 @@ export function App() {
                       className="welcome-suggestion-card"
                       onClick={() => handleSendQueryToAI("What are my priority tasks for today?")}
                     >
-                      <span className="card-icon">⚡</span>
+                      <span className="card-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                          <line x1="16" y1="2" x2="16" y2="6" />
+                          <line x1="8" y1="2" x2="8" y2="6" />
+                          <line x1="3" y1="10" x2="21" y2="10" />
+                          <path d="m9 16 2 2 4-4" />
+                        </svg>
+                      </span>
                       <div>
                         <div className="card-headline">Check Daily Plan</div>
                         <div className="card-desc">Review tasks & recommended next action</div>
@@ -1045,7 +1135,13 @@ export function App() {
                       className="welcome-suggestion-card"
                       onClick={() => handleSendQueryToAI("Summarize my recent memory logs and facts.")}
                     >
-                      <span className="card-icon">🧠</span>
+                      <span className="card-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                          <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                          <line x1="12" y1="22.08" x2="12" y2="12" />
+                        </svg>
+                      </span>
                       <div>
                         <div className="card-headline">Review Memory</div>
                         <div className="card-desc">Search personal timeline and facts</div>
@@ -1055,7 +1151,13 @@ export function App() {
                       className="welcome-suggestion-card"
                       onClick={() => handleSendQueryToAI("Give me a summary of my weight and gym progress.")}
                     >
-                      <span className="card-icon">📊</span>
+                      <span className="card-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="20" x2="18" y2="10" />
+                          <line x1="12" y1="20" x2="12" y2="4" />
+                          <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg>
+                      </span>
                       <div>
                         <div className="card-headline">Health & Trackers</div>
                         <div className="card-desc">Analyze trends and analytics</div>
@@ -1072,7 +1174,16 @@ export function App() {
                   className={`chat-message-item ${msg.sender === "user" ? "user-msg" : "assistant-msg"}`}
                 >
                   <div className="message-avatar">
-                    {msg.sender === "user" ? "👤" : "T"}
+                    {msg.sender === "user" ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+                      </svg>
+                    )}
                   </div>
                   <div className="message-content-wrapper">
                     <div className="message-sender-name">{msg.senderName}</div>
@@ -1087,30 +1198,50 @@ export function App() {
                           title="Copy response"
                           onClick={() => handleCopyMessage(msg.text)}
                         >
-                          📋
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                          </svg>
                         </button>
                         <button className="action-tool-btn" title="Good response">
-                          👍
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                          </svg>
                         </button>
                         <button className="action-tool-btn" title="Bad response">
-                          👎
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3" />
+                          </svg>
                         </button>
                         <button
                           className="action-tool-btn"
                           title="Read aloud (Listen)"
                           onClick={() => handleSpeakMessage(msg.text)}
                         >
-                          🔊
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                          </svg>
                         </button>
                         <button className="action-tool-btn" title="Share">
-                          ↗
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="18" cy="5" r="3" />
+                            <circle cx="6" cy="12" r="3" />
+                            <circle cx="18" cy="19" r="3" />
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                          </svg>
                         </button>
                         <button
                           className="action-tool-btn"
                           title="Regenerate"
                           onClick={() => handleRetryAssistant()}
                         >
-                          ↻
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="23 4 23 10 17 10" />
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                          </svg>
                         </button>
                         <button className="action-tool-btn" title="More">
                           •••
@@ -1129,7 +1260,7 @@ export function App() {
         <section className="myday-view">
           {nextAction && (
             <div className="next-action-card">
-              <div className="next-action-badge">⚡ Recommended Next Action</div>
+              <div className="next-action-badge">Recommended Next Action</div>
               <div className="next-action-title">{nextAction.task}</div>
               <div className="next-action-why">{nextAction.why}</div>
               {nextAction.has_pending && nextAction.task_id && (
@@ -1160,7 +1291,11 @@ export function App() {
                     onClick={() => t.status !== "completed" && handleCompleteTask(t.id)}
                     disabled={t.status === "completed"}
                   >
-                    {t.status === "completed" ? "✓" : ""}
+                    {t.status === "completed" ? (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    ) : ""}
                   </button>
                   <div className="task-content">
                     <div className="task-name">{t.title}</div>
@@ -1250,7 +1385,7 @@ export function App() {
         <section className="research-view">
           {/* Research Q&A Box */}
           <div className="research-qa-card">
-            <div className="card-title">🔍 Research Assistant (Source-Backed)</div>
+            <div className="card-title">Research Assistant (Source-Backed)</div>
             <div className="chart-sub">
               Answers questions strictly grounded in your personal documents and knowledge using SQLite FTS5.
             </div>
@@ -1288,7 +1423,7 @@ export function App() {
           {/* Document Ingestion & Library */}
           <div className="docs-grid">
             <div className="memory-card">
-              <div className="card-title">📄 Ingest Personal Document</div>
+              <div className="card-title">Ingest Personal Document</div>
               <form onSubmit={handleCreateDocument} className="doc-form">
                 <input
                   type="text"
@@ -1311,7 +1446,7 @@ export function App() {
             </div>
 
             <div className="memory-card">
-              <div className="card-title">📚 Document Library ({documents.length})</div>
+              <div className="card-title">Document Library ({documents.length})</div>
               {documents.length === 0 ? (
                 <div className="empty-text">No personal documents indexed yet.</div>
               ) : (
@@ -1334,7 +1469,7 @@ export function App() {
         <section className="trackers-view">
           {weeklyReport && (
             <div className="report-card">
-              <div className="card-title">📊 Weekly Progress Summary (Past 7 Days)</div>
+              <div className="card-title">Weekly Progress Summary (Past 7 Days)</div>
               <p className="report-summary-text">{weeklyReport.grounded_summary}</p>
               <div className="report-stats-grid">
                 <div className="report-stat">
@@ -1398,7 +1533,7 @@ export function App() {
             <div className="chart-card">
               <div className="chart-header">
                 <div>
-                  <div className="card-title">⚖️ Weight Progression (30 Days)</div>
+                  <div className="card-title">Weight Progression (30 Days)</div>
                   <div className="chart-sub">
                     Latest: {weightAnalytics?.current_weight ? `${weightAnalytics.current_weight} ${weightAnalytics.unit}` : "No data"} • 
                     Avg: {weightAnalytics?.average_weight ? `${weightAnalytics.average_weight} ${weightAnalytics.unit}` : "No data"}
@@ -1433,7 +1568,7 @@ export function App() {
             <div className="chart-card">
               <div className="chart-header">
                 <div>
-                  <div className="card-title">🏋️ Gym Workouts & Minutes (30 Days)</div>
+                  <div className="card-title">Gym Workouts & Minutes (30 Days)</div>
                   <div className="chart-sub">
                     {gymAnalytics?.total_sessions || 0} total sessions • {gymAnalytics?.total_minutes || 0} total minutes
                   </div>
@@ -1475,7 +1610,7 @@ export function App() {
               <button type="submit" className="btn-secondary">Search</button>
             </form>
             <button onClick={handleExportData} className="btn-secondary" title="Export all memory to JSON">
-              📥 Export Data
+              Export Data
             </button>
           </div>
 
@@ -1510,7 +1645,7 @@ export function App() {
 
           <div className="memory-grid">
             <div className="memory-card">
-              <div className="card-title">📅 Daily Logs</div>
+              <div className="card-title">Daily Logs</div>
               {dailyLogs.length === 0 ? (
                 <div className="empty-text">No daily logs extracted yet.</div>
               ) : (
@@ -1526,7 +1661,7 @@ export function App() {
             </div>
 
             <div className="memory-card">
-              <div className="card-title">⚖️ Tracked Measurements</div>
+              <div className="card-title">Tracked Measurements</div>
               {measurements.length === 0 ? (
                 <div className="empty-text">No measurements recorded yet.</div>
               ) : (
@@ -1552,7 +1687,7 @@ export function App() {
             </div>
 
             <div className="memory-card">
-              <div className="card-title">🏃 Activities & Habits</div>
+              <div className="card-title">Activities & Habits</div>
               {activities.length === 0 ? (
                 <div className="empty-text">No activities logged yet.</div>
               ) : (
@@ -1573,7 +1708,7 @@ export function App() {
             </div>
 
             <div className="memory-card">
-              <div className="card-title">💡 Facts, Decisions & Goals</div>
+              <div className="card-title">Facts, Decisions & Goals</div>
               {facts.length === 0 ? (
                 <div className="empty-text">No facts or goals recorded yet.</div>
               ) : (

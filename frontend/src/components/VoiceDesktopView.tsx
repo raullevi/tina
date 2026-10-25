@@ -270,7 +270,11 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
               className="pc-lang-btn"
               onClick={() => setShowLangMenu(!showLangMenu)}
             >
-              <span className="globe-icon">🌐</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="2" y1="12" x2="22" y2="12"/>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
               <span>Main Language</span>
               <span className="lang-highlight">{selectedLanguage}</span>
               <span className="chevron-icon">↕</span>
@@ -300,19 +304,19 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
               className="pc-chip"
               onClick={() => setInputText("Schedule an evening study session tomorrow")}
             >
-              📅 Schedule evening session...
+              Schedule evening session...
             </button>
             <button
               className="pc-chip"
               onClick={() => setInputText("Logged 45 min gym workout")}
             >
-              🏋️ Log gym workout...
+              Log gym workout...
             </button>
             <button
               className="pc-chip"
               onClick={() => setInputText("Weight is 78.5 kg today")}
             >
-              ⚖️ Weight check-in...
+              Weight check-in...
             </button>
           </div>
         </div>
@@ -324,7 +328,9 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
         <div className="pc-card-panel chat-panel">
           <div className="panel-header">
             <div className="panel-title-row">
-              <span className="panel-icon">💬</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
               <span className="panel-title">Conversation with Thena</span>
             </div>
             <span className="badge">{messages.length} messages</span>
@@ -357,7 +363,11 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
         <div className="pc-card-panel transcript-panel">
           <div className="panel-header">
             <div className="panel-title-row">
-              <span className="panel-icon">🎙️</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="22"/>
+              </svg>
               <span className="panel-title">Whisper Speech Transcript</span>
             </div>
 
@@ -428,7 +438,13 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
             </div>
           ) : (
             <div className="pc-empty-transcript">
-              <div className="empty-icon">🎙️</div>
+              <div className="empty-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" y1="19" x2="12" y2="22"/>
+                </svg>
+              </div>
               <div className="empty-title">No Voice Recording Active</div>
               <div className="empty-desc">
                 Click the central glowing orb above or use the microphone button below to record your voice. Faster-Whisper will transcribe it locally on your M4 chip!
