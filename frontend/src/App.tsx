@@ -1,4 +1,15 @@
 import { useState, useEffect, useRef } from "react";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts";
 import "./App.css";
 
 interface VoiceSession {
@@ -43,10 +54,38 @@ interface FactItem {
   value: string;
 }
 
+interface WeightAnalytics {
+  count: number;
+  current_weight: number | null;
+  start_weight: number | null;
+  weight_delta: number;
+  min_weight: number | null;
+  max_weight: number | null;
+  average_weight: number | null;
+  unit: string;
+  time_series: { date: string; value: number; rolling_avg: number }[];
+}
+
+interface GymAnalytics {
+  total_sessions: number;
+  total_minutes: number;
+  avg_session_minutes: number;
+  sessions_per_week: number;
+  daily_breakdown: { date: string; duration_minutes: number }[];
+  exercise_counts: Record<string, number>;
+}
+
+interface WeeklyReport {
+  report_period: { start_date: string; end_date: string };
+  grounded_summary: string;
+  weight_analysis: WeightAnalytics;
+  fitness_analysis: GymAnalytics;
+}
+
 const BACKEND_BASE = "http://localhost:8000";
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<"voice" | "memory">("voice");
+  const [activeTab, setActiveTab] = useState<"voice" | "memory" | "trackers">("voice");
 
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -81,6 +120,16 @@ export function App() {
   const [measurements, setMeasurements] = useState<MeasurementItem[]>([]);
   const [facts, setFacts] = useState<FactItem[]>([]);
 
+  // Phase 4 Analytics states
+  const [weightAnalytics, setWeightAnalytics] = useState<WeightAnalytics | null>(null);
+  const [gymAnalytics, setGymAnalytics] = useState<GymAnalytics | null>(null);
+  const [weeklyReport, setWeeklyReport] = useState<WeeklyReport | null>(null);
+
+  // Quick manual log form states
+  const [logWeightVal, setLogWeightVal] = useState("");
+  const [logGymName, setLogGymName] = useState("");
+  const [logGymDuration, setLogGymDuration] = useState("");
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
@@ -105,8 +154,7 @@ export function App() {
     try {
       const res = await fetch(`${BACKEND_BASE}/api/voice/sessions`);
       if (res.ok) {
-        const data: VoiceSession[] = await res.json();
-        setSessions(data);
+        setSessions(await res.json());
       }
     } catch (err) {
       console.error("Error loading voice sessions:", err);
@@ -131,15 +179,32 @@ export function App() {
     }
   };
 
+  const loadAnalytics = async () => {
+    try {
+      const [resW, resG, resR] = await Promise.all([
+        fetch(`${BACKEND_BASE}/api/analytics/weight?days=30`),
+        fetch(`${BACKEND_BASE}/api/analytics/gym?days=30`),
+        fetch(`${BACKEND_BASE}/api/analytics/weekly-report`),
+      ]);
+
+      if (resW.ok) setWeightAnalytics(await resW.json());
+      if (resG.ok) setGymAnalytics(await resG.json());
+      if (resR.ok) setWeeklyReport(await resR.json());
+    } catch (err) {
+      console.error("Error loading analytics:", err);
+    }
+  };
+
   useEffect(() => {
     checkStatus();
     loadSessions();
     loadMemoryData();
+    loadAnalytics();
     const interval = setInterval(checkStatus, 15000);
     return () => clearInterval(interval);
   }, []);
 
-  // Recording controls
+  // Voice recording handlers
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -256,7 +321,7 @@ export function App() {
         const result = await response.json();
         setActiveSession((prev) => (prev ? { ...prev, aiReply: result.reply } : null));
         setStatusText("Response received & memory stored!");
-        await loadMemoryData();
+        await Promise.all([loadMemoryData(), loadAnalytics()]);
       }
     } catch (err) {
       console.error("AI processing error:", err);
@@ -274,7 +339,7 @@ export function App() {
         body: JSON.stringify({ review_status: "confirmed" }),
       });
       if (res.ok) {
-        await loadMemoryData();
+        await Promise.all([loadMemoryData(), loadAnalytics()]);
       }
     } catch (err) {
       console.error("Error confirming measurement:", err);
@@ -313,6 +378,46 @@ export function App() {
     }
   };
 
+  // Manual Quick Logs
+  const handleQuickLogWeight = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const val = parseFloat(logWeightVal);
+    if (isNaN(val) || val <= 0) return;
+    try {
+      const res = await fetch(`${BACKEND_BASE}/api/trackers/weight`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: val, unit: "kg" }),
+      });
+      if (res.ok) {
+        setLogWeightVal("");
+        await Promise.all([loadMemoryData(), loadAnalytics()]);
+      }
+    } catch (err) {
+      console.error("Log weight error:", err);
+    }
+  };
+
+  const handleQuickLogGym = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const duration = parseFloat(logGymDuration);
+    if (!logGymName.trim() || isNaN(duration) || duration <= 0) return;
+    try {
+      const res = await fetch(`${BACKEND_BASE}/api/trackers/gym`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: logGymName, duration_minutes: duration, category: "gym" }),
+      });
+      if (res.ok) {
+        setLogGymName("");
+        setLogGymDuration("");
+        await Promise.all([loadMemoryData(), loadAnalytics()]);
+      }
+    } catch (err) {
+      console.error("Log gym error:", err);
+    }
+  };
+
   return (
     <div className="app-container">
       {/* Header */}
@@ -341,6 +446,15 @@ export function App() {
           >
             Personal Memory
           </button>
+          <button
+            className={`tab-btn ${activeTab === "trackers" ? "active" : ""}`}
+            onClick={() => {
+              setActiveTab("trackers");
+              loadAnalytics();
+            }}
+          >
+            Trackers & Analytics
+          </button>
         </nav>
 
         <div className="status-badges">
@@ -368,12 +482,7 @@ export function App() {
                 aria-label={isRecording ? "Stop Recording" : "Start Recording"}
                 title="Click to speak"
               >
-                <svg
-                  className="mic-icon"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="mic-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -388,7 +497,7 @@ export function App() {
             <div className="sub-label">
               {isRecording
                 ? "Speak your update naturally — press again when finished"
-                : "Push-to-talk: speak your daily updates, routines, and measurements"}
+                : "Push-to-talk: speak your daily updates, gym workouts, and measurements"}
             </div>
           </main>
 
@@ -474,7 +583,7 @@ export function App() {
         </>
       )}
 
-      {/* VIEW 2: Personal Memory & Historical Retrieval */}
+      {/* VIEW 2: Personal Memory */}
       {activeTab === "memory" && (
         <section className="memory-view">
           <div className="memory-header-actions">
@@ -523,7 +632,6 @@ export function App() {
           )}
 
           <div className="memory-grid">
-            {/* Daily Logs */}
             <div className="memory-card">
               <div className="card-title">📅 Daily Logs</div>
               {dailyLogs.length === 0 ? (
@@ -540,7 +648,6 @@ export function App() {
               )}
             </div>
 
-            {/* Measurements */}
             <div className="memory-card">
               <div className="card-title">⚖️ Tracked Measurements</div>
               {measurements.length === 0 ? (
@@ -551,9 +658,7 @@ export function App() {
                     <div key={m.id} className="memory-row measurement-row">
                       <div>
                         <strong>{m.metric}:</strong> {m.value} {m.unit}
-                        <span className={`status-pill ${m.review_status}`}>
-                          {m.review_status}
-                        </span>
+                        <span className={`status-pill ${m.review_status}`}>{m.review_status}</span>
                       </div>
                       {m.review_status === "uncertain" && (
                         <button
@@ -569,7 +674,6 @@ export function App() {
               )}
             </div>
 
-            {/* Activities */}
             <div className="memory-card">
               <div className="card-title">🏃 Activities & Habits</div>
               {activities.length === 0 ? (
@@ -591,7 +695,6 @@ export function App() {
               )}
             </div>
 
-            {/* Personal Facts */}
             <div className="memory-card">
               <div className="card-title">💡 Facts, Decisions & Goals</div>
               {facts.length === 0 ? (
@@ -607,6 +710,142 @@ export function App() {
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* VIEW 3: Phase 4 Trackers & Analytics */}
+      {activeTab === "trackers" && (
+        <section className="trackers-view">
+          {/* Weekly Report Card */}
+          {weeklyReport && (
+            <div className="report-card">
+              <div className="card-title">📊 Weekly Progress Summary (Past 7 Days)</div>
+              <p className="report-summary-text">{weeklyReport.grounded_summary}</p>
+              <div className="report-stats-grid">
+                <div className="report-stat">
+                  <span className="stat-label">Weight Delta</span>
+                  <span className={`stat-value ${weeklyReport.weight_analysis.weight_delta <= 0 ? "good" : ""}`}>
+                    {weeklyReport.weight_analysis.weight_delta > 0 ? "+" : ""}
+                    {weeklyReport.weight_analysis.weight_delta} {weeklyReport.weight_analysis.unit}
+                  </span>
+                </div>
+                <div className="report-stat">
+                  <span className="stat-label">Gym Sessions</span>
+                  <span className="stat-value">{weeklyReport.fitness_analysis.total_sessions}</span>
+                </div>
+                <div className="report-stat">
+                  <span className="stat-label">Total Workout Time</span>
+                  <span className="stat-value">{weeklyReport.fitness_analysis.total_minutes} min</span>
+                </div>
+                <div className="report-stat">
+                  <span className="stat-label">Avg Workout</span>
+                  <span className="stat-value">{weeklyReport.fitness_analysis.avg_session_minutes} min</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Quick Log Forms */}
+          <div className="quick-logs-bar">
+            <form onSubmit={handleQuickLogWeight} className="quick-form">
+              <span className="form-tag">Log Weight</span>
+              <input
+                type="number"
+                step="0.1"
+                placeholder="kg (e.g. 75.2)"
+                value={logWeightVal}
+                onChange={(e) => setLogWeightVal(e.target.value)}
+                className="quick-input"
+              />
+              <button type="submit" className="btn-secondary">Save</button>
+            </form>
+
+            <form onSubmit={handleQuickLogGym} className="quick-form">
+              <span className="form-tag">Log Workout</span>
+              <input
+                type="text"
+                placeholder="Exercise (e.g. Chest & Triceps)"
+                value={logGymName}
+                onChange={(e) => setLogGymName(e.target.value)}
+                className="quick-input"
+              />
+              <input
+                type="number"
+                placeholder="Minutes"
+                value={logGymDuration}
+                onChange={(e) => setLogGymDuration(e.target.value)}
+                className="quick-input input-short"
+              />
+              <button type="submit" className="btn-secondary">Save</button>
+            </form>
+          </div>
+
+          {/* Charts Grid */}
+          <div className="charts-grid">
+            {/* Weight Progression Chart */}
+            <div className="chart-card">
+              <div className="chart-header">
+                <div>
+                  <div className="card-title">⚖️ Weight Progression (30 Days)</div>
+                  <div className="chart-sub">
+                    Latest: {weightAnalytics?.current_weight ? `${weightAnalytics.current_weight} ${weightAnalytics.unit}` : "No data"} • 
+                    Avg: {weightAnalytics?.average_weight ? `${weightAnalytics.average_weight} ${weightAnalytics.unit}` : "No data"}
+                  </div>
+                </div>
+              </div>
+
+              {weightAnalytics && weightAnalytics.time_series.length > 0 ? (
+                <div className="chart-wrapper">
+                  <ResponsiveContainer width="100%" height={240}>
+                    <AreaChart data={weightAnalytics.time_series}>
+                      <defs>
+                        <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.4} />
+                          <stop offset="95%" stopColor="#38bdf8" stopOpacity={0.0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                      <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
+                      <YAxis domain={["dataMin - 1", "dataMax + 1"]} stroke="#64748b" fontSize={11} />
+                      <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: "8px" }} />
+                      <Area type="monotone" dataKey="value" stroke="#38bdf8" strokeWidth={2} fill="url(#weightGrad)" name="Weight" />
+                      <Area type="monotone" dataKey="rolling_avg" stroke="#f59e0b" strokeWidth={2} strokeDasharray="4 4" fill="none" name="7-Day Avg" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="empty-text">Log at least one weight entry to see the chart.</div>
+              )}
+            </div>
+
+            {/* Gym Duration & Workouts Chart */}
+            <div className="chart-card">
+              <div className="chart-header">
+                <div>
+                  <div className="card-title">🏋️ Gym Workouts & Minutes (30 Days)</div>
+                  <div className="chart-sub">
+                    {gymAnalytics?.total_sessions || 0} total sessions • {gymAnalytics?.total_minutes || 0} total minutes
+                  </div>
+                </div>
+              </div>
+
+              {gymAnalytics && gymAnalytics.daily_breakdown.length > 0 ? (
+                <div className="chart-wrapper">
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart data={gymAnalytics.daily_breakdown}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                      <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
+                      <YAxis stroke="#64748b" fontSize={11} />
+                      <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: "8px" }} />
+                      <Bar dataKey="duration_minutes" fill="#10b981" radius={[4, 4, 0, 0]} name="Minutes" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="empty-text">Log a gym or workout session to see workout statistics.</div>
               )}
             </div>
           </div>

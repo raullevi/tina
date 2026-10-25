@@ -567,3 +567,137 @@
   background: #10b981;
   color: #fff;
 }
+
+/* Trackers & Analytics Styles (Phase 4) */
+.trackers-view {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.report-card {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.5));
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.report-summary-text {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #f1f5f9;
+}
+
+.report-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.report-stat {
+  background: rgba(10, 15, 29, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-top: 2px;
+}
+
+.stat-value.good {
+  color: #10b981;
+}
+
+/* Quick Logs Bar */
+.quick-logs-bar {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.quick-form {
+  flex: 1;
+  min-width: 280px;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #38bdf8;
+  white-space: nowrap;
+}
+
+.quick-input {
+  flex: 1;
+  background: #090d16;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: #f8fafc;
+  font-size: 0.85rem;
+}
+
+.quick-input.input-short {
+  max-width: 90px;
+}
+
+.quick-input:focus {
+  outline: none;
+  border-color: #38bdf8;
+}
+
+/* Charts Grid */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 20px;
+}
+
+.chart-card {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.chart-sub {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.chart-wrapper {
+  width: 100%;
+  height: 240px;
+}

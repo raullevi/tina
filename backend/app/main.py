@@ -24,6 +24,7 @@ from app.db.session import get_db, init_db
 from app.services.extractor import ExtractionService
 from app.services.ollama import OllamaService
 from app.services.transcription import TranscriptionService
+from app.services.analytics import AnalyticsEngine
 
 settings = get_settings()
 
@@ -812,3 +813,111 @@ async def ollama_generate(req: GenerateRequest) -> GenerateResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Generation failed: {str(exc)}",
         ) from exc
+
+
+# ---------------------------------------------------------
+# Phase 4: Life Trackers & Analytics Endpoints (pandas)
+# ---------------------------------------------------------
+
+class LogWeightRequest(BaseModel):
+    value: float = Field(..., gt=0, description="Weight measurement value")
+    unit: str = Field(default="kg", description="Unit of measurement (kg, lbs)")
+    date: Optional[str] = Field(None, description="YYYY-MM-DD or defaults to today")
+    notes: Optional[str] = None
+
+
+class LogGymRequest(BaseModel):
+    name: str = Field(..., min_length=1, description="Exercise or workout name (e.g., 'Bench Press')")
+    duration_minutes: float = Field(..., gt=0, description="Duration in minutes")
+    category: str = Field(default="gym", description="gym, fitness, workout")
+    date: Optional[str] = Field(None, description="YYYY-MM-DD or defaults to today")
+    notes: Optional[str] = None
+
+
+@app.get("/api/analytics/weight", tags=["Analytics"])
+async def get_weight_analytics(
+    days: int = Query(30, ge=1, le=365),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Calculate deterministic weight trends using pandas."""
+    return AnalyticsEngine.get_weight_analytics(db, days=days)
+
+
+@app.get("/api/analytics/gym", tags=["Analytics"])
+async def get_gym_analytics(
+    days: int = Query(30, ge=1, le=365),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Calculate deterministic gym and workout analytics using pandas."""
+    return AnalyticsEngine.get_gym_analytics(db, days=days)
+
+
+@app.get("/api/analytics/weekly-report", tags=["Analytics"])
+async def get_weekly_report(
+    target_date: Optional[str] = Query(None, description="Reference end date YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Phase 4 Weekly Progress Report:
+    Calculates deterministic weekly statistics for weight, fitness, and daily logs.
+    """
+    ref_d = date.fromisoformat(target_date) if target_date else date.today()
+    return AnalyticsEngine.generate_weekly_report(db, target_date=ref_d)
+
+
+@app.post("/api/trackers/weight", response_model=MeasurementResponse, tags=["Trackers"])
+async def log_weight_manual(
+    req: LogWeightRequest,
+    db: Session = Depends(get_db),
+) -> MeasurementResponse:
+    """Manually log a weight measurement."""
+    m_date = date.fromisoformat(req.date) if req.date else date.today()
+    meas = Measurement(
+        metric="weight",
+        value=req.value,
+        unit=req.unit,
+        measurement_date=m_date,
+        review_status="confirmed",
+        notes=req.notes,
+    )
+    db.add(meas)
+    db.commit()
+    db.refresh(meas)
+    return MeasurementResponse(
+        id=meas.id,
+        metric=meas.metric,
+        value=meas.value,
+        unit=meas.unit,
+        measurement_date=meas.measurement_date.isoformat(),
+        review_status=meas.review_status,
+        notes=meas.notes,
+        source_transcript_id=meas.source_transcript_id,
+    )
+
+
+@app.post("/api/trackers/gym", response_model=ActivityResponse, tags=["Trackers"])
+async def log_gym_manual(
+    req: LogGymRequest,
+    db: Session = Depends(get_db),
+) -> ActivityResponse:
+    """Manually log a gym workout activity."""
+    a_date = date.fromisoformat(req.date) if req.date else date.today()
+    act = Activity(
+        name=req.name,
+        category=req.category,
+        duration_minutes=req.duration_minutes,
+        activity_date=a_date,
+        notes=req.notes,
+    )
+    db.add(act)
+    db.commit()
+    db.refresh(act)
+    return ActivityResponse(
+        id=act.id,
+        name=act.name,
+        category=act.category,
+        duration_minutes=act.duration_minutes,
+        activity_date=act.activity_date.isoformat(),
+        notes=act.notes,
+        source_transcript_id=act.source_transcript_id,
+    )
