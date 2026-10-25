@@ -1,16 +1,27 @@
 from contextlib import asynccontextmanager
+from datetime import date, datetime
 import os
 import shutil
 from typing import Any, Dict, List, Optional
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.db.models import Transcript, VoiceSession
+from app.db.models import (
+    Activity,
+    AuditLog,
+    DailyLog,
+    Measurement,
+    PersonalFact,
+    Transcript,
+    VoiceSession,
+)
 from app.db.session import get_db, init_db
+from app.services.extractor import ExtractionService
 from app.services.ollama import OllamaService
 from app.services.transcription import TranscriptionService
 
@@ -49,6 +60,7 @@ app.add_middleware(
 
 ollama_service = OllamaService(settings=settings)
 transcription_service = TranscriptionService(settings=settings)
+extraction_service = ExtractionService(ollama_service=ollama_service)
 
 
 # ---------------------------------------------------------
@@ -58,7 +70,7 @@ transcription_service = TranscriptionService(settings=settings)
 class HealthResponse(BaseModel):
     status: str = Field(..., json_schema_extra={"example": "healthy"})
     service: Optional[str] = Field(None, json_schema_extra={"example": "skim-backend"})
-    version: Optional[str] = Field(None, json_schema_extra={"example": "0.2.0"})
+    version: Optional[str] = Field(None, json_schema_extra={"example": "0.3.0"})
 
 
 class OllamaStatusResponse(BaseModel):
@@ -128,6 +140,58 @@ class GenerateResponse(BaseModel):
     total_duration_ms: Optional[int] = None
 
 
+# Phase 3 Memory Schemas
+class DailyLogResponse(BaseModel):
+    id: int
+    log_date: str
+    summary: str
+    source_transcript_id: Optional[int] = None
+    created_at: str
+
+
+class ActivityResponse(BaseModel):
+    id: int
+    category: str
+    name: str
+    duration_minutes: Optional[float] = None
+    activity_date: str
+    notes: Optional[str] = None
+    source_transcript_id: Optional[int] = None
+
+
+class MeasurementResponse(BaseModel):
+    id: int
+    metric: str
+    value: float
+    unit: str
+    measurement_date: str
+    review_status: str
+    notes: Optional[str] = None
+    source_transcript_id: Optional[int] = None
+
+
+class MeasurementConfirmRequest(BaseModel):
+    value: Optional[float] = None
+    review_status: str = Field(default="confirmed")
+    notes: Optional[str] = None
+
+
+class PersonalFactResponse(BaseModel):
+    id: int
+    category: str
+    key: str
+    value: str
+    source_transcript_id: Optional[int] = None
+
+
+class MemoryExtractResponse(BaseModel):
+    session_id: int
+    daily_log: Optional[DailyLogResponse] = None
+    activities: List[ActivityResponse] = Field(default_factory=list)
+    measurements: List[MeasurementResponse] = Field(default_factory=list)
+    facts: List[PersonalFactResponse] = Field(default_factory=list)
+
+
 # ---------------------------------------------------------
 # Core System Endpoints
 # ---------------------------------------------------------
@@ -148,7 +212,7 @@ async def health_check() -> HealthResponse:
     return HealthResponse(
         status="healthy",
         service="skim-backend",
-        version=settings.app_version,
+        version="0.3.0",
     )
 
 
@@ -168,17 +232,11 @@ async def upload_and_transcribe_audio(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ) -> VoiceAudioResponse:
-    """
-    Phase 2 Core Voice Endpoint:
-    Accepts recorded voice audio (WAV/WebM/MP3), saves it locally, runs local Whisper
-    transcription, persists the original transcript, and returns the transcription.
-    """
-    # 1. Create a session record
+    """Accepts recorded voice audio, transcribes with Whisper, and stores session."""
     session_record = VoiceSession(status="recording")
     db.add(session_record)
     db.flush()
 
-    # 2. Save uploaded audio to recordings directory
     ext = os.path.splitext(file.filename or "")[1] or ".wav"
     saved_filename = f"session_{session_record.id}{ext}"
     saved_path = os.path.join(settings.recordings_dir, saved_filename)
@@ -188,7 +246,6 @@ async def upload_and_transcribe_audio(
 
     session_record.file_path = saved_path
 
-    # 3. Transcribe audio with local Faster-Whisper
     try:
         transcription_result = await transcription_service.transcribe_file(saved_path)
         transcribed_text = transcription_result.get("text", "").strip()
@@ -198,7 +255,6 @@ async def upload_and_transcribe_audio(
         session_record.status = "transcribed"
         session_record.duration_seconds = duration_sec
 
-        # 4. Save raw immutable transcript linked to session
         transcript_record = Transcript(
             session_id=session_record.id,
             original_text=transcribed_text or "(No speech detected)",
@@ -282,10 +338,7 @@ async def update_session_transcript(
     req: TranscriptEditRequest,
     db: Session = Depends(get_db),
 ) -> TranscriptResponse:
-    """
-    Edit transcript while preserving original text.
-    Fulfills Blueprint rule #5: 'Preserve original transcripts and link extracted records'.
-    """
+    """Edit transcript while preserving original text."""
     transcript = db.query(Transcript).filter(Transcript.session_id == session_id).first()
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found for session")
@@ -308,7 +361,7 @@ async def process_session_with_ai(
     session_id: int,
     db: Session = Depends(get_db),
 ) -> ProcessSessionResponse:
-    """Send confirmed/edited transcript to Ollama LLM to generate response and acknowledge."""
+    """Send confirmed transcript to Ollama LLM and auto-trigger memory extraction."""
     transcript = db.query(Transcript).filter(Transcript.session_id == session_id).first()
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found for session")
@@ -326,11 +379,373 @@ async def process_session_with_ai(
         system_prompt=system_prompt,
     )
 
+    # Automatically extract structured memory entities
+    try:
+        extraction = await extraction_service.extract_from_text(active_text)
+        if extraction.daily_summary:
+            db.add(DailyLog(
+                log_date=date.today(),
+                summary=extraction.daily_summary,
+                source_transcript_id=transcript.id,
+            ))
+        for act in extraction.activities:
+            db.add(Activity(
+                category=act.category,
+                name=act.name,
+                duration_minutes=act.duration_minutes,
+                notes=act.notes,
+                source_transcript_id=transcript.id,
+            ))
+        for m in extraction.measurements:
+            db.add(Measurement(
+                metric=m.metric,
+                value=m.value,
+                unit=m.unit,
+                review_status=m.review_status,
+                notes=m.notes,
+                source_transcript_id=transcript.id,
+            ))
+        for f in extraction.facts:
+            db.add(PersonalFact(
+                category=f.category,
+                key=f.key,
+                value=f.value,
+                source_transcript_id=transcript.id,
+            ))
+        db.commit()
+    except Exception as exc:
+        print(f"Auto-extraction warning: {exc}")
+
     return ProcessSessionResponse(
         session_id=session_id,
         processed_text=active_text,
         reply=ollama_res.get("response", "Noted."),
     )
+
+
+# ---------------------------------------------------------
+# Phase 3: Persistent Memory & Historical Retrieval Endpoints
+# ---------------------------------------------------------
+
+@app.post("/api/memory/extract/{session_id}", response_model=MemoryExtractResponse, tags=["Memory"])
+async def extract_structured_memory(
+    session_id: int,
+    db: Session = Depends(get_db),
+) -> MemoryExtractResponse:
+    """Extract and persist structured personal records linked to source transcript."""
+    transcript = db.query(Transcript).filter(Transcript.session_id == session_id).first()
+    if not transcript:
+        raise HTTPException(status_code=404, detail="Transcript not found for session")
+
+    active_text = transcript.edited_text or transcript.original_text
+    extracted = await extraction_service.extract_from_text(active_text)
+
+    # 1. Daily Log
+    saved_daily_log = None
+    if extracted.daily_summary:
+        d_log = DailyLog(
+            log_date=date.today(),
+            summary=extracted.daily_summary,
+            source_transcript_id=transcript.id,
+        )
+        db.add(d_log)
+        db.flush()
+        saved_daily_log = DailyLogResponse(
+            id=d_log.id,
+            log_date=d_log.log_date.isoformat(),
+            summary=d_log.summary,
+            source_transcript_id=d_log.source_transcript_id,
+            created_at=d_log.created_at.isoformat(),
+        )
+
+    # 2. Activities
+    saved_activities = []
+    for act in extracted.activities:
+        act_rec = Activity(
+            category=act.category,
+            name=act.name,
+            duration_minutes=act.duration_minutes,
+            activity_date=date.today(),
+            notes=act.notes,
+            source_transcript_id=transcript.id,
+        )
+        db.add(act_rec)
+        db.flush()
+        saved_activities.append(ActivityResponse(
+            id=act_rec.id,
+            category=act_rec.category,
+            name=act_rec.name,
+            duration_minutes=act_rec.duration_minutes,
+            activity_date=act_rec.activity_date.isoformat(),
+            notes=act_rec.notes,
+            source_transcript_id=act_rec.source_transcript_id,
+        ))
+
+    # 3. Measurements
+    saved_measurements = []
+    for m in extracted.measurements:
+        meas_rec = Measurement(
+            metric=m.metric,
+            value=m.value,
+            unit=m.unit,
+            measurement_date=date.today(),
+            review_status=m.review_status,
+            notes=m.notes,
+            source_transcript_id=transcript.id,
+        )
+        db.add(meas_rec)
+        db.flush()
+        saved_measurements.append(MeasurementResponse(
+            id=meas_rec.id,
+            metric=meas_rec.metric,
+            value=meas_rec.value,
+            unit=meas_rec.unit,
+            measurement_date=meas_rec.measurement_date.isoformat(),
+            review_status=meas_rec.review_status,
+            notes=meas_rec.notes,
+            source_transcript_id=meas_rec.source_transcript_id,
+        ))
+
+    # 4. Personal Facts
+    saved_facts = []
+    for f in extracted.facts:
+        fact_rec = PersonalFact(
+            category=f.category,
+            key=f.key,
+            value=f.value,
+            source_transcript_id=transcript.id,
+        )
+        db.add(fact_rec)
+        db.flush()
+        saved_facts.append(PersonalFactResponse(
+            id=fact_rec.id,
+            category=fact_rec.category,
+            key=fact_rec.key,
+            value=fact_rec.value,
+            source_transcript_id=fact_rec.source_transcript_id,
+        ))
+
+    # 5. Audit Log
+    db.add(AuditLog(
+        action="extracted",
+        entity="transcripts",
+        entity_id=transcript.id,
+        description=f"Extracted {len(saved_activities)} activities, {len(saved_measurements)} measurements, {len(saved_facts)} facts.",
+    ))
+
+    db.commit()
+
+    return MemoryExtractResponse(
+        session_id=session_id,
+        daily_log=saved_daily_log,
+        activities=saved_activities,
+        measurements=saved_measurements,
+        facts=saved_facts,
+    )
+
+
+@app.get("/api/memory/daily-logs", response_model=List[DailyLogResponse], tags=["Memory"])
+async def list_daily_logs(
+    log_date: Optional[str] = Query(None, description="Filter by YYYY-MM-DD"),
+    db: Session = Depends(get_db),
+) -> List[DailyLogResponse]:
+    """Retrieve daily summary logs."""
+    query = db.query(DailyLog)
+    if log_date:
+        query = query.filter(DailyLog.log_date == date.fromisoformat(log_date))
+    logs = query.order_by(DailyLog.id.desc()).all()
+    return [
+        DailyLogResponse(
+            id=l.id,
+            log_date=l.log_date.isoformat(),
+            summary=l.summary,
+            source_transcript_id=l.source_transcript_id,
+            created_at=l.created_at.isoformat(),
+        )
+        for l in logs
+    ]
+
+
+@app.get("/api/memory/activities", response_model=List[ActivityResponse], tags=["Memory"])
+async def list_activities(
+    category: Optional[str] = Query(None, description="gym, study, work, chore, general"),
+    db: Session = Depends(get_db),
+) -> List[ActivityResponse]:
+    """Retrieve recorded activities filtered by category."""
+    query = db.query(Activity)
+    if category:
+        query = query.filter(Activity.category == category)
+    items = query.order_by(Activity.id.desc()).all()
+    return [
+        ActivityResponse(
+            id=a.id,
+            category=a.category,
+            name=a.name,
+            duration_minutes=a.duration_minutes,
+            activity_date=a.activity_date.isoformat(),
+            notes=a.notes,
+            source_transcript_id=a.source_transcript_id,
+        )
+        for a in items
+    ]
+
+
+@app.get("/api/memory/measurements", response_model=List[MeasurementResponse], tags=["Memory"])
+async def list_measurements(
+    metric: Optional[str] = Query(None, description="weight, sleep_hours, water_liters, etc."),
+    db: Session = Depends(get_db),
+) -> List[MeasurementResponse]:
+    """Retrieve numeric measurements."""
+    query = db.query(Measurement)
+    if metric:
+        query = query.filter(Measurement.metric == metric)
+    items = query.order_by(Measurement.id.desc()).all()
+    return [
+        MeasurementResponse(
+            id=m.id,
+            metric=m.metric,
+            value=m.value,
+            unit=m.unit,
+            measurement_date=m.measurement_date.isoformat(),
+            review_status=m.review_status,
+            notes=m.notes,
+            source_transcript_id=m.source_transcript_id,
+        )
+        for m in items
+    ]
+
+
+@app.put("/api/memory/measurements/{measurement_id}/confirm", response_model=MeasurementResponse, tags=["Memory"])
+async def confirm_or_edit_measurement(
+    measurement_id: int,
+    req: MeasurementConfirmRequest,
+    db: Session = Depends(get_db),
+) -> MeasurementResponse:
+    """Confirm or correct an extracted measurement."""
+    meas = db.query(Measurement).filter(Measurement.id == measurement_id).first()
+    if not meas:
+        raise HTTPException(status_code=404, detail="Measurement not found")
+
+    old_val = meas.value
+    if req.value is not None:
+        meas.value = req.value
+    meas.review_status = req.review_status
+    if req.notes:
+        meas.notes = req.notes
+
+    db.add(AuditLog(
+        action="confirmed" if req.value is None else "corrected",
+        entity="measurements",
+        entity_id=meas.id,
+        description=f"Confirmed measurement id {meas.id}. Value changed from {old_val} to {meas.value}.",
+    ))
+    db.commit()
+    db.refresh(meas)
+
+    return MeasurementResponse(
+        id=meas.id,
+        metric=meas.metric,
+        value=meas.value,
+        unit=meas.unit,
+        measurement_date=meas.measurement_date.isoformat(),
+        review_status=meas.review_status,
+        notes=meas.notes,
+        source_transcript_id=meas.source_transcript_id,
+    )
+
+
+@app.get("/api/memory/facts", response_model=List[PersonalFactResponse], tags=["Memory"])
+async def list_personal_facts(
+    category: Optional[str] = None,
+    db: Session = Depends(get_db),
+) -> List[PersonalFactResponse]:
+    """Retrieve saved personal facts, preferences, decisions, and goals."""
+    query = db.query(PersonalFact)
+    if category:
+        query = query.filter(PersonalFact.category == category)
+    items = query.order_by(PersonalFact.id.desc()).all()
+    return [
+        PersonalFactResponse(
+            id=f.id,
+            category=f.category,
+            key=f.key,
+            value=f.value,
+            source_transcript_id=f.source_transcript_id,
+        )
+        for f in items
+    ]
+
+
+@app.get("/api/memory/search", tags=["Memory"])
+async def search_memory(
+    q: str = Query(..., min_length=1, description="Keyword search query"),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Search across transcripts, daily logs, activities, and facts."""
+    search_term = f"%{q}%"
+    
+    transcripts = (
+        db.query(Transcript)
+        .filter(or_(Transcript.original_text.like(search_term), Transcript.edited_text.like(search_term)))
+        .limit(10)
+        .all()
+    )
+    daily_logs = (
+        db.query(DailyLog)
+        .filter(DailyLog.summary.like(search_term))
+        .limit(10)
+        .all()
+    )
+    activities = (
+        db.query(Activity)
+        .filter(or_(Activity.name.like(search_term), Activity.notes.like(search_term)))
+        .limit(10)
+        .all()
+    )
+    facts = (
+        db.query(PersonalFact)
+        .filter(or_(PersonalFact.key.like(search_term), PersonalFact.value.like(search_term)))
+        .limit(10)
+        .all()
+    )
+
+    return {
+        "query": q,
+        "results": {
+            "transcripts": [{"session_id": t.session_id, "text": t.edited_text or t.original_text} for t in transcripts],
+            "daily_logs": [{"id": l.id, "date": l.log_date.isoformat(), "summary": l.summary} for l in daily_logs],
+            "activities": [{"id": a.id, "name": a.name, "category": a.category, "date": a.activity_date.isoformat()} for a in activities],
+            "facts": [{"id": f.id, "key": f.key, "value": f.value, "category": f.category} for f in facts],
+        }
+    }
+
+
+@app.get("/api/memory/export", tags=["Memory"])
+async def export_memory(db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """Export complete persistent memory database as structured JSON."""
+    return {
+        "export_date": datetime.utcnow().isoformat(),
+        "transcripts": [
+            {"id": t.id, "session_id": t.session_id, "text": t.edited_text or t.original_text, "created_at": t.created_at.isoformat()}
+            for t in db.query(Transcript).all()
+        ],
+        "daily_logs": [
+            {"id": l.id, "date": l.log_date.isoformat(), "summary": l.summary, "source_transcript_id": l.source_transcript_id}
+            for l in db.query(DailyLog).all()
+        ],
+        "activities": [
+            {"id": a.id, "category": a.category, "name": a.name, "duration": a.duration_minutes, "date": a.activity_date.isoformat()}
+            for a in db.query(Activity).all()
+        ],
+        "measurements": [
+            {"id": m.id, "metric": m.metric, "value": m.value, "unit": m.unit, "date": m.measurement_date.isoformat(), "status": m.review_status}
+            for m in db.query(Measurement).all()
+        ],
+        "facts": [
+            {"id": f.id, "category": f.category, "key": f.key, "value": f.value}
+            for f in db.query(PersonalFact).all()
+        ],
+    }
 
 
 # ---------------------------------------------------------

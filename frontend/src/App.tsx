@@ -11,15 +11,50 @@ interface VoiceSession {
   audio_url: string | null;
 }
 
+interface ActivityItem {
+  id: number;
+  category: string;
+  name: string;
+  duration_minutes: number | null;
+  activity_date: string;
+  notes: string | null;
+}
+
+interface MeasurementItem {
+  id: number;
+  metric: string;
+  value: number;
+  unit: string;
+  measurement_date: string;
+  review_status: string;
+  notes: string | null;
+}
+
+interface DailyLogItem {
+  id: number;
+  log_date: string;
+  summary: string;
+}
+
+interface FactItem {
+  id: number;
+  category: string;
+  key: string;
+  value: string;
+}
+
 const BACKEND_BASE = "http://localhost:8000";
 
 export function App() {
+  const [activeTab, setActiveTab] = useState<"voice" | "memory">("voice");
+
+  // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
   const [statusText, setStatusText] = useState("Ready to listen");
   const [backendOnline, setBackendOnline] = useState(false);
   const [ollamaOnline, setOllamaOnline] = useState(false);
 
-  // Active session state
+  // Active session
   const [activeSession, setActiveSession] = useState<{
     sessionId: number;
     originalText: string;
@@ -32,10 +67,24 @@ export function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [sessions, setSessions] = useState<VoiceSession[]>([]);
 
+  // Memory tab states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<{
+    transcripts: { session_id: number; text: string }[];
+    daily_logs: { id: number; date: string; summary: string }[];
+    activities: { id: number; name: string; category: string; date: string }[];
+    facts: { id: number; key: string; value: string; category: string }[];
+  } | null>(null);
+
+  const [dailyLogs, setDailyLogs] = useState<DailyLogItem[]>([]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [measurements, setMeasurements] = useState<MeasurementItem[]>([]);
+  const [facts, setFacts] = useState<FactItem[]>([]);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  // System status check and history loader
+  // Health and data loaders
   const checkStatus = async () => {
     try {
       const resHealth = await fetch(`${BACKEND_BASE}/health`);
@@ -64,14 +113,33 @@ export function App() {
     }
   };
 
+  const loadMemoryData = async () => {
+    try {
+      const [resLogs, resAct, resMeas, resFacts] = await Promise.all([
+        fetch(`${BACKEND_BASE}/api/memory/daily-logs`),
+        fetch(`${BACKEND_BASE}/api/memory/activities`),
+        fetch(`${BACKEND_BASE}/api/memory/measurements`),
+        fetch(`${BACKEND_BASE}/api/memory/facts`),
+      ]);
+
+      if (resLogs.ok) setDailyLogs(await resLogs.json());
+      if (resAct.ok) setActivities(await resAct.json());
+      if (resMeas.ok) setMeasurements(await resMeas.json());
+      if (resFacts.ok) setFacts(await resFacts.json());
+    } catch (err) {
+      console.error("Error loading memory data:", err);
+    }
+  };
+
   useEffect(() => {
     checkStatus();
     loadSessions();
+    loadMemoryData();
     const interval = setInterval(checkStatus, 15000);
     return () => clearInterval(interval);
   }, []);
 
-  // Voice Recording Handlers
+  // Recording controls
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -147,7 +215,6 @@ export function App() {
     }
   };
 
-  // Transcript Edit Handler
   const handleSaveTranscript = async () => {
     if (!activeSession) return;
     setIsSaving(true);
@@ -171,13 +238,11 @@ export function App() {
     }
   };
 
-  // AI Processing Handler
   const handleSendToAI = async () => {
     if (!activeSession) return;
     setIsProcessing(true);
-    setStatusText("SKIM is thinking with local LLM...");
+    setStatusText("SKIM is understanding and extracting memory...");
     try {
-      // First save any edited text
       if (activeSession.editedText !== activeSession.originalText) {
         await handleSaveTranscript();
       }
@@ -190,13 +255,61 @@ export function App() {
       if (response.ok) {
         const result = await response.json();
         setActiveSession((prev) => (prev ? { ...prev, aiReply: result.reply } : null));
-        setStatusText("Response received from SKIM!");
+        setStatusText("Response received & memory stored!");
+        await loadMemoryData();
       }
     } catch (err) {
       console.error("AI processing error:", err);
       setStatusText("Failed to process with AI.");
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleConfirmMeasurement = async (id: number) => {
+    try {
+      const res = await fetch(`${BACKEND_BASE}/api/memory/measurements/${id}/confirm`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ review_status: "confirmed" }),
+      });
+      if (res.ok) {
+        await loadMemoryData();
+      }
+    } catch (err) {
+      console.error("Error confirming measurement:", err);
+    }
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    try {
+      const res = await fetch(`${BACKEND_BASE}/api/memory/search?q=${encodeURIComponent(searchQuery)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSearchResults(data.results);
+      }
+    } catch (err) {
+      console.error("Search error:", err);
+    }
+  };
+
+  const handleExportData = async () => {
+    try {
+      const res = await fetch(`${BACKEND_BASE}/api/memory/export`);
+      if (res.ok) {
+        const data = await res.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `skim_memory_export_${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error("Export error:", err);
     }
   };
 
@@ -212,6 +325,24 @@ export function App() {
           </div>
         </div>
 
+        <nav className="nav-tabs">
+          <button
+            className={`tab-btn ${activeTab === "voice" ? "active" : ""}`}
+            onClick={() => setActiveTab("voice")}
+          >
+            Voice Assistant
+          </button>
+          <button
+            className={`tab-btn ${activeTab === "memory" ? "active" : ""}`}
+            onClick={() => {
+              setActiveTab("memory");
+              loadMemoryData();
+            }}
+          >
+            Personal Memory
+          </button>
+        </nav>
+
         <div className="status-badges">
           <div className="badge">
             <span className={`badge-dot ${backendOnline ? "" : "offline"}`} />
@@ -219,136 +350,268 @@ export function App() {
           </div>
           <div className="badge">
             <span className={`badge-dot ${ollamaOnline ? "" : "offline"}`} />
-            <span>Ollama (llama3.2:3b)</span>
+            <span>Ollama Local LLM</span>
           </div>
         </div>
       </header>
 
-      {/* Voice Hero Section */}
-      <main className="voice-hero">
-        <div className={`orb-container ${isRecording ? "recording" : ""}`}>
-          <div className="orb-ring ring-outer" />
-          <div className="orb-ring ring-mid" />
-          <button
-            className="mic-button"
-            onClick={toggleRecording}
-            aria-label={isRecording ? "Stop Recording" : "Start Recording"}
-            title="Click to speak"
-          >
-            <svg
-              className="mic-icon"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <div className="status-label">{statusText}</div>
-        <div className="sub-label">
-          {isRecording
-            ? "Speak your update naturally — press to finish"
-            : "Push-to-talk: speak your daily updates, routines, and tasks"}
-        </div>
-      </main>
-
-      {/* Active Session & Editable Transcript */}
-      {activeSession && (
-        <section className="session-card">
-          <div className="card-header">
-            <div className="card-title">
-              <span style={{ color: "#38bdf8" }}>●</span> Recorded Voice Update #{activeSession.sessionId}
-            </div>
-          </div>
-
-          <div className="audio-controls">
-            <audio
-              controls
-              className="audio-player"
-              src={activeSession.audioUrl}
-            />
-          </div>
-
-          <div className="transcript-label">
-            <span>Transcribed by Local Whisper (Editable)</span>
-            {activeSession.editedText !== activeSession.originalText && (
-              <span style={{ color: "#f59e0b" }}>Modified</span>
-            )}
-          </div>
-
-          <textarea
-            className="transcript-textarea"
-            value={activeSession.editedText}
-            onChange={(e) =>
-              setActiveSession({ ...activeSession, editedText: e.target.value })
-            }
-            placeholder="Edit transcript if Whisper made any speech mistakes..."
-          />
-
-          <div className="card-actions">
-            <button
-              className="btn-secondary"
-              onClick={handleSaveTranscript}
-              disabled={isSaving}
-            >
-              {isSaving ? "Saving..." : "Save Corrections"}
-            </button>
-            <button
-              className="btn-primary"
-              onClick={handleSendToAI}
-              disabled={isProcessing}
-            >
-              {isProcessing ? "Processing..." : "Confirm & Send to SKIM"}
-            </button>
-          </div>
-
-          {activeSession.aiReply && (
-            <div className="ai-reply-box">
-              <div className="ai-reply-header">SKIM Assistant Response</div>
-              <div className="ai-reply-text">{activeSession.aiReply}</div>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Recent Voice Sessions History */}
-      <section className="history-section">
-        <div className="section-title">Recent Voice History</div>
-        {sessions.length === 0 ? (
-          <div style={{ color: "#64748b", fontSize: "0.9rem" }}>
-            No recorded voice sessions yet. Press the microphone button above to record your first update.
-          </div>
-        ) : (
-          <div className="history-list">
-            {sessions.map((s) => (
-              <div key={s.session_id} className="history-item">
-                <div className="history-item-top">
-                  <span>Session #{s.session_id} • {new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                  <span>{s.duration_seconds ? `${s.duration_seconds}s` : ""}</span>
-                </div>
-                <div className="history-text">
-                  {s.edited_text || s.original_text || "(No transcript)"}
-                </div>
-                {s.audio_url && (
-                  <audio
-                    controls
-                    className="history-audio"
-                    src={`${BACKEND_BASE}${s.audio_url}`}
+      {/* VIEW 1: Voice Assistant */}
+      {activeTab === "voice" && (
+        <>
+          <main className="voice-hero">
+            <div className={`orb-container ${isRecording ? "recording" : ""}`}>
+              <div className="orb-ring ring-outer" />
+              <div className="orb-ring ring-mid" />
+              <button
+                className="mic-button"
+                onClick={toggleRecording}
+                aria-label={isRecording ? "Stop Recording" : "Start Recording"}
+                title="Click to speak"
+              >
+                <svg
+                  className="mic-icon"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
                   />
+                </svg>
+              </button>
+            </div>
+
+            <div className="status-label">{statusText}</div>
+            <div className="sub-label">
+              {isRecording
+                ? "Speak your update naturally — press again when finished"
+                : "Push-to-talk: speak your daily updates, routines, and measurements"}
+            </div>
+          </main>
+
+          {activeSession && (
+            <section className="session-card">
+              <div className="card-header">
+                <div className="card-title">
+                  <span style={{ color: "#38bdf8" }}>●</span> Recorded Voice Update #{activeSession.sessionId}
+                </div>
+              </div>
+
+              <div className="audio-controls">
+                <audio controls className="audio-player" src={activeSession.audioUrl} />
+              </div>
+
+              <div className="transcript-label">
+                <span>Transcribed by Local Whisper (Editable)</span>
+                {activeSession.editedText !== activeSession.originalText && (
+                  <span style={{ color: "#f59e0b" }}>Modified</span>
                 )}
               </div>
-            ))}
+
+              <textarea
+                className="transcript-textarea"
+                value={activeSession.editedText}
+                onChange={(e) =>
+                  setActiveSession({ ...activeSession, editedText: e.target.value })
+                }
+                placeholder="Edit transcript if Whisper made any speech mistakes..."
+              />
+
+              <div className="card-actions">
+                <button
+                  className="btn-secondary"
+                  onClick={handleSaveTranscript}
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Saving..." : "Save Corrections"}
+                </button>
+                <button
+                  className="btn-primary"
+                  onClick={handleSendToAI}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? "Processing..." : "Confirm & Send to SKIM"}
+                </button>
+              </div>
+
+              {activeSession.aiReply && (
+                <div className="ai-reply-box">
+                  <div className="ai-reply-header">SKIM Assistant Response</div>
+                  <div className="ai-reply-text">{activeSession.aiReply}</div>
+                </div>
+              )}
+            </section>
+          )}
+
+          <section className="history-section">
+            <div className="section-title">Recent Voice Recordings</div>
+            {sessions.length === 0 ? (
+              <div style={{ color: "#64748b", fontSize: "0.9rem" }}>
+                No recorded voice sessions yet. Press the microphone button above to record your first update.
+              </div>
+            ) : (
+              <div className="history-list">
+                {sessions.map((s) => (
+                  <div key={s.session_id} className="history-item">
+                    <div className="history-item-top">
+                      <span>Session #{s.session_id} • {new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>{s.duration_seconds ? `${s.duration_seconds}s` : ""}</span>
+                    </div>
+                    <div className="history-text">
+                      {s.edited_text || s.original_text || "(No transcript)"}
+                    </div>
+                    {s.audio_url && (
+                      <audio controls className="history-audio" src={`${BACKEND_BASE}${s.audio_url}`} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
+      {/* VIEW 2: Personal Memory & Historical Retrieval */}
+      {activeTab === "memory" && (
+        <section className="memory-view">
+          <div className="memory-header-actions">
+            <form onSubmit={handleSearch} className="search-form">
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Search personal memory (e.g., 'jog', '75kg', 'laundry')..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <button type="submit" className="btn-secondary">Search</button>
+            </form>
+            <button onClick={handleExportData} className="btn-secondary" title="Export all memory to JSON">
+              📥 Export Data
+            </button>
           </div>
-        )}
-      </section>
+
+          {searchResults && (
+            <div className="search-results-panel">
+              <div className="panel-title">Search Results for "{searchQuery}"</div>
+              {searchResults.daily_logs.length === 0 &&
+               searchResults.activities.length === 0 &&
+               searchResults.facts.length === 0 && (
+                <div style={{ color: "#64748b" }}>No memory records matched your search query.</div>
+              )}
+              {searchResults.daily_logs.map((dl) => (
+                <div key={`s-dl-${dl.id}`} className="memory-item">
+                  <span className="memory-tag tag-log">Daily Log</span>
+                  <span className="memory-text">{dl.summary}</span>
+                </div>
+              ))}
+              {searchResults.activities.map((act) => (
+                <div key={`s-act-${act.id}`} className="memory-item">
+                  <span className="memory-tag tag-act">{act.category}</span>
+                  <span className="memory-text"><strong>{act.name}</strong> ({act.date})</span>
+                </div>
+              ))}
+              {searchResults.facts.map((f) => (
+                <div key={`s-f-${f.id}`} className="memory-item">
+                  <span className="memory-tag tag-fact">{f.category}</span>
+                  <span className="memory-text"><strong>{f.key}:</strong> {f.value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="memory-grid">
+            {/* Daily Logs */}
+            <div className="memory-card">
+              <div className="card-title">📅 Daily Logs</div>
+              {dailyLogs.length === 0 ? (
+                <div className="empty-text">No daily logs extracted yet.</div>
+              ) : (
+                <div className="memory-list">
+                  {dailyLogs.map((log) => (
+                    <div key={log.id} className="memory-row">
+                      <div className="row-date">{log.log_date}</div>
+                      <div className="row-text">{log.summary}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Measurements */}
+            <div className="memory-card">
+              <div className="card-title">⚖️ Tracked Measurements</div>
+              {measurements.length === 0 ? (
+                <div className="empty-text">No measurements recorded yet.</div>
+              ) : (
+                <div className="memory-list">
+                  {measurements.map((m) => (
+                    <div key={m.id} className="memory-row measurement-row">
+                      <div>
+                        <strong>{m.metric}:</strong> {m.value} {m.unit}
+                        <span className={`status-pill ${m.review_status}`}>
+                          {m.review_status}
+                        </span>
+                      </div>
+                      {m.review_status === "uncertain" && (
+                        <button
+                          className="btn-confirm-small"
+                          onClick={() => handleConfirmMeasurement(m.id)}
+                        >
+                          Confirm
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Activities */}
+            <div className="memory-card">
+              <div className="card-title">🏃 Activities & Habits</div>
+              {activities.length === 0 ? (
+                <div className="empty-text">No activities logged yet.</div>
+              ) : (
+                <div className="memory-list">
+                  {activities.map((a) => (
+                    <div key={a.id} className="memory-row">
+                      <div>
+                        <strong>{a.name}</strong>{" "}
+                        <span className="category-pill">{a.category}</span>
+                      </div>
+                      <div className="row-sub">
+                        {a.duration_minutes ? `${a.duration_minutes} min • ` : ""}{a.activity_date}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Personal Facts */}
+            <div className="memory-card">
+              <div className="card-title">💡 Facts, Decisions & Goals</div>
+              {facts.length === 0 ? (
+                <div className="empty-text">No facts or goals recorded yet.</div>
+              ) : (
+                <div className="memory-list">
+                  {facts.map((f) => (
+                    <div key={f.id} className="memory-row">
+                      <div>
+                        <strong>{f.key}:</strong> {f.value}
+                      </div>
+                      <div className="row-sub">{f.category}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

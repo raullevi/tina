@@ -1,5 +1,5 @@
-from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from datetime import datetime, date
+from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
@@ -30,7 +30,91 @@ class Transcript(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     session = relationship("VoiceSession", back_populates="transcripts")
+    daily_logs = relationship("DailyLog", back_populates="source_transcript")
+    activities = relationship("Activity", back_populates="source_transcript")
+    measurements = relationship("Measurement", back_populates="source_transcript")
+    personal_facts = relationship("PersonalFact", back_populates="source_transcript")
 
+
+# ---------------------------------------------------------
+# Phase 3: Persistent Memory & Life Trackers Schema
+# ---------------------------------------------------------
+
+class DailyLog(Base):
+    """Daily summaries linked to source transcripts."""
+    __tablename__ = "daily_logs"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    log_date = Column(Date, default=date.today, nullable=False, index=True)
+    summary = Column(Text, nullable=False)
+    source_transcript_id = Column(Integer, ForeignKey("transcripts.id", ondelete="SET NULL"), nullable=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    source_transcript = relationship("Transcript", back_populates="daily_logs")
+
+
+class Activity(Base):
+    """Gym, study, work, and other activities linked to source transcripts."""
+    __tablename__ = "activities"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    category = Column(String(50), default="general", nullable=False, index=True)  # gym, study, work, chore, general
+    name = Column(String(255), nullable=False)
+    duration_minutes = Column(Float, nullable=True)
+    activity_date = Column(Date, default=date.today, nullable=False, index=True)
+    notes = Column(Text, nullable=True)
+    source_transcript_id = Column(Integer, ForeignKey("transcripts.id", ondelete="SET NULL"), nullable=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    source_transcript = relationship("Transcript", back_populates="activities")
+
+
+class Measurement(Base):
+    """Numeric measurements (weight, sleep, water) with units and review status."""
+    __tablename__ = "measurements"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    metric = Column(String(100), nullable=False, index=True)  # weight, sleep_hours, water_liters, steps
+    value = Column(Float, nullable=False)
+    unit = Column(String(50), nullable=False)  # kg, lbs, hours, liters, count
+    measurement_date = Column(Date, default=date.today, nullable=False, index=True)
+    review_status = Column(String(50), default="confirmed", nullable=False)  # confirmed, uncertain
+    notes = Column(Text, nullable=True)
+    source_transcript_id = Column(Integer, ForeignKey("transcripts.id", ondelete="SET NULL"), nullable=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    source_transcript = relationship("Transcript", back_populates="measurements")
+
+
+class PersonalFact(Base):
+    """User facts, preferences, decisions, and goals linked to source transcripts."""
+    __tablename__ = "personal_facts"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    category = Column(String(50), default="fact", nullable=False, index=True)  # preference, decision, fact, goal
+    key = Column(String(255), nullable=False, index=True)
+    value = Column(Text, nullable=False)
+    source_transcript_id = Column(Integer, ForeignKey("transcripts.id", ondelete="SET NULL"), nullable=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    source_transcript = relationship("Transcript", back_populates="personal_facts")
+
+
+class AuditLog(Base):
+    """Immutable audit trail of data modifications and deletions."""
+    __tablename__ = "audit_log"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    action = Column(String(50), nullable=False)  # created, updated, deleted, confirmed
+    entity = Column(String(50), nullable=False)  # measurements, activities, daily_logs, facts
+    entity_id = Column(Integer, nullable=True)
+    description = Column(Text, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+# ---------------------------------------------------------
+# Hierarchical Life Tree Schema
+# ---------------------------------------------------------
 
 class LifeNode(Base):
     """Hierarchical Life Tree node (Area, Goal, Routine, Task)."""
