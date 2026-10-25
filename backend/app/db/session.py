@@ -41,13 +41,18 @@ def init_db() -> None:
     import app.db.models  # noqa: F401
     Base.metadata.create_all(bind=engine)
 
-    # Lightweight migration: Ensure voice_sessions has file_path column
+    # Lightweight migrations for SQLite
     with engine.connect() as conn:
-        try:
-            conn.execute(text("SELECT file_path FROM voice_sessions LIMIT 1"))
-        except Exception:
+        for tbl, col, col_def in [
+            ("voice_sessions", "file_path", "VARCHAR(500)"),
+            ("routine_rules", "name", "VARCHAR(255) DEFAULT 'Routine'"),
+            ("task_occurrences", "title", "VARCHAR(255) DEFAULT 'Task'"),
+        ]:
             try:
-                conn.execute(text("ALTER TABLE voice_sessions ADD COLUMN file_path VARCHAR(500)"))
-                conn.commit()
+                conn.execute(text(f"SELECT {col} FROM {tbl} LIMIT 1"))
             except Exception:
-                pass
+                try:
+                    conn.execute(text(f"ALTER TABLE {tbl} ADD COLUMN {col} {col_def}"))
+                    conn.commit()
+                except Exception:
+                    pass

@@ -37,7 +37,7 @@ class Transcript(Base):
 
 
 # ---------------------------------------------------------
-# Phase 3: Persistent Memory & Life Trackers Schema
+# Phase 3 & 4: Persistent Memory & Life Trackers Schema
 # ---------------------------------------------------------
 
 class DailyLog(Base):
@@ -113,7 +113,34 @@ class AuditLog(Base):
 
 
 # ---------------------------------------------------------
-# Hierarchical Life Tree Schema
+# Phase 5: Documents & Research Sources
+# ---------------------------------------------------------
+
+class Document(Base):
+    """Imported personal documents for knowledge retrieval."""
+    __tablename__ = "documents"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String(255), nullable=False, index=True)
+    content = Column(Text, nullable=False)
+    filename = Column(String(255), nullable=True)
+    file_type = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class ResearchSource(Base):
+    """Source URLs, titles, and retrieval dates for cited research answers."""
+    __tablename__ = "research_sources"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    url = Column(String(500), nullable=True)
+    title = Column(String(255), nullable=False)
+    snippet = Column(Text, nullable=True)
+    retrieval_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+# ---------------------------------------------------------
+# Phase 6: Hierarchical Life Tree & Routines (Life OS)
 # ---------------------------------------------------------
 
 class LifeNode(Base):
@@ -122,7 +149,7 @@ class LifeNode(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String(255), nullable=False)
-    type = Column(String(50), nullable=False)  # area, goal, routine, task
+    type = Column(String(50), nullable=False)  # area, cluster, goal, routine, task
     parent_id = Column(Integer, ForeignKey("life_nodes.id", ondelete="SET NULL"), nullable=True)
     description = Column(Text, nullable=True)
     status = Column(String(50), default="active", nullable=False)
@@ -130,21 +157,26 @@ class LifeNode(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     parent = relationship("LifeNode", remote_side=[id], backref="children")
+    routines = relationship("RoutineRule", back_populates="node", cascade="all, delete-orphan")
 
 
 class RoutineRule(Base):
-    """Recurrence rules for scheduled routines."""
+    """Recurrence rules for scheduled routines (interval, weekly, event, deadline)."""
     __tablename__ = "routine_rules"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     node_id = Column(Integer, ForeignKey("life_nodes.id", ondelete="CASCADE"), nullable=False)
-    schedule_type = Column(String(50), nullable=False)  # interval, weekly, event, deadline
+    name = Column(String(255), nullable=False)
+    schedule_type = Column(String(50), nullable=False)  # interval, weekly, daily, event, deadline
     interval_days = Column(Integer, nullable=True)
-    weekday = Column(Integer, nullable=True)
+    weekday = Column(Integer, nullable=True)  # 0=Monday, 6=Sunday
     time_of_day = Column(String(20), nullable=True)
     duration_minutes = Column(Integer, nullable=True)
     enabled = Column(Boolean, default=True, nullable=False)
     details = Column(Text, nullable=True)
+
+    node = relationship("LifeNode", back_populates="routines")
+    occurrences = relationship("TaskOccurrence", back_populates="routine", cascade="all, delete-orphan")
 
 
 class TaskOccurrence(Base):
@@ -152,11 +184,29 @@ class TaskOccurrence(Base):
     __tablename__ = "task_occurrences"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    routine_id = Column(Integer, ForeignKey("routine_rules.id", ondelete="SET NULL"), nullable=True)
-    due_date = Column(DateTime, nullable=True)
+    routine_id = Column(Integer, ForeignKey("routine_rules.id", ondelete="CASCADE"), nullable=True)
+    title = Column(String(255), nullable=False)
+    due_date = Column(Date, default=date.today, nullable=False, index=True)
     status = Column(String(50), default="pending", nullable=False)  # pending, completed, missed
     completed_at = Column(DateTime, nullable=True)
     notes = Column(Text, nullable=True)
+
+    routine = relationship("RoutineRule", back_populates="occurrences")
+
+
+class Goal(Base):
+    """Target values, deadlines, and progress tracking."""
+    __tablename__ = "goals"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    node_id = Column(Integer, ForeignKey("life_nodes.id", ondelete="SET NULL"), nullable=True)
+    title = Column(String(255), nullable=False)
+    target_value = Column(Float, nullable=True)
+    target_unit = Column(String(50), nullable=True)
+    current_value = Column(Float, nullable=True)
+    deadline = Column(Date, nullable=True)
+    status = Column(String(50), default="active", nullable=False)  # active, completed, paused
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
 class ActivityEvent(Base):

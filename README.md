@@ -1,33 +1,66 @@
 # SKIM — Voice-First Personal Life OS
 
-> **Goal:** Zero-budget, local-first, voice-first personal life operating system.  
-> **Status:** Phase 1, Phase 2, Phase 3 & Phase 4 Complete (Foundation, Voice Capture, Faster-Whisper, Persistent Memory, and Life Trackers & pandas Analytics with Recharts).
+> **Goal:** Zero-budget, local-first, voice-first personal life operating system on macOS Apple Silicon.  
+> **Status:** Phase 1 through Phase 6 Complete (Foundation, Voice Capture, Faster-Whisper STT, Memory Extraction, Trackers & pandas Analytics, SQLite FTS5 Research Assistant, Life Tree Hierarchy & Routines Scheduler).
+
+---
+
+## Complete Feature Matrix
+
+| Phase | Milestone | Status | Key Highlights |
+| :--- | :--- | :---: | :--- |
+| **Phase 1** | Foundation & Scaffold | ✅ Complete | FastAPI, SQLite with WAL mode, local Ollama client (`llama3.2:3b`), health checks |
+| **Phase 2** | Voice Capture & Local STT | ✅ Complete | Push-to-talk microphone, Faster-Whisper (`tiny.en`), audio storage/replay, non-destructive transcript editing |
+| **Phase 3** | Memory & Extraction | ✅ Complete | Structured entity extraction (`daily_logs`, `activities`, `measurements`, `personal_facts`), FTS/keyword search, JSON export |
+| **Phase 4** | Life Trackers & Analytics | ✅ Complete | Deterministic pandas statistics (weight trends, 7-day rolling average, gym volume), grounded weekly progress report, Recharts |
+| **Phase 5** | Research Assistant | ✅ Complete | Personal document ingestion, SQLite FTS5 full-text indexing, citation-backed LLM question answering |
+| **Phase 6** | Life Tree & My Day | ✅ Complete | Hierarchical life clusters (Health, Work, Growth, Finance, Personal), automated daily routine task generation, task completion, Next Best Action recommendation |
 
 ---
 
 ## Architecture Overview
 
-- **Backend:** Python + FastAPI + SQLAlchemy ORM (SQLite with WAL mode and foreign keys)
-- **Analytics Engine:** Deterministic numerical statistics with `pandas` (no LLM arithmetic hallucinations)
-- **Speech Recognition (STT):** Local Faster-Whisper (`tiny.en` / `base.en`, INT8, Apple Silicon optimized)
-- **Local LLM & Extractor:** Ollama running `llama3.2:3b` with structured JSON schema extraction
-- **Data Persistence:** Local SQLite database with tables for `voice_sessions`, `transcripts`, `daily_logs`, `activities`, `measurements`, `personal_facts`, and `audit_log`
-- **Frontend Dashboard:** React + Vite + TypeScript with animated voice orb, audio replay, Personal Memory search, and Recharts analytics
-- **Testing:** 16 automated tests covering calculations, database persistence, and weekly reports
+```
+                      ┌────────────────────────────────────────┐
+                      │    React + Vite + TypeScript UI        │
+                      │  (Voice / My Day / Life Tree /         │
+                      │   Research / Trackers / Memory)        │
+                      └───────────────────┬────────────────────┘
+                                          │ REST API
+                                          ▼
+                      ┌────────────────────────────────────────┐
+                      │          FastAPI Backend Engine        │
+                      ├────────────────────────────────────────┤
+                      │ • Local Faster-Whisper STT (INT8 CPU)  │
+                      │ • Local Ollama LLM (llama3.2:3b)       │
+                      │ • Pandas Deterministic Analytics       │
+                      │ • SQLite FTS5 Search & Document Engine │
+                      │ • Routine Scheduler & Life Tree Router │
+                      └───────────────────┬────────────────────┘
+                                          │ SQLAlchemy ORM
+                                          ▼
+                      ┌────────────────────────────────────────┐
+                      │       Local SQLite Database (WAL)      │
+                      │  (skim.db - zero cloud transmission)   │
+                      └────────────────────────────────────────┘
+```
 
 ---
 
-## Key Capabilities (Phase 4: Life Trackers & Analytics)
+## API Endpoints Reference
 
-1. **Deterministic Weight Trends:** Calculates start, current, min, max, average weight, total delta, and a 7-day rolling average using pandas.
-2. **Gym & Workout Analytics:** Computes total sessions, total workout minutes, average session duration, workouts per week, and exercise distribution.
-3. **Weekly Progress Report:** Generates a grounded progress report where all statistics mathematically match the database.
-4. **Interactive Charts:** Beautiful Recharts area charts for weight progression and bar charts for workout minutes.
-5. **Multi-Modal Input:** Log updates via voice (transcribed and auto-extracted) or quick manual log forms.
+### Life Tree & My Day (Phase 6)
+- `GET /api/life-tree` — Get complete hierarchical tree of clusters, routine counts, and overdue tasks
+- `GET /api/life-tree/{cluster_id}/workspace` — Get cluster detail, child nodes, routines, and active goals
+- `GET /api/my-day/tasks?target_date=YYYY-MM-DD` — Get daily scheduled routine occurrences (creates on-demand)
+- `POST /api/my-day/tasks/{task_id}/complete` — Complete a scheduled routine task
+- `GET /api/my-day/next-action` — Get AI-prioritized Next Best Action recommendation based on overdue tasks and time of day
 
----
-
-## API Endpoints
+### Research Assistant & Documents (Phase 5)
+- `POST /api/research/documents` — Ingest and index personal document into SQLite FTS5
+- `GET /api/research/documents` — List all indexed documents
+- `GET /api/research/search?q=...` — Full-text keyword search across documents using FTS5
+- `POST /api/research/query` — Ask a question to the local Research Assistant with source citations
 
 ### Trackers & Analytics (Phase 4)
 - `GET /api/analytics/weight?days=30` — Weight statistics, delta, and daily time series with 7-day rolling average
@@ -36,8 +69,8 @@
 - `POST /api/trackers/weight` — Quick manual log for weight measurement
 - `POST /api/trackers/gym` — Quick manual log for gym workout
 
-### Voice & Personal Memory (Phase 1–3)
-- `POST /api/voice/audio` — Upload audio → local Whisper transcription → stores in SQLite
+### Voice & Personal Memory (Phases 1–3)
+- `POST /api/voice/audio` — Upload audio → local Faster-Whisper transcription → store in SQLite
 - `GET /api/voice/sessions` — List voice sessions with audio replay links
 - `GET /api/voice/sessions/{session_id}/audio` — Stream and replay recorded audio file
 - `POST /api/voice/sessions/{session_id}/process` — Send voice update to LLM and auto-extract memory entities
@@ -45,45 +78,57 @@
 - `GET /api/memory/activities` — Retrieve logged activities
 - `GET /api/memory/measurements` — Retrieve numeric measurements
 - `PUT /api/memory/measurements/{id}/confirm` — Confirm or calibrate measurement values
-- `GET /api/memory/search?q=...` — Keyword search across memory history
+- `GET /api/memory/search?q=...` — Search across memory history
 - `GET /api/memory/export` — Full JSON database export
 
 ---
 
 ## Running the Application
 
-### 1. Start the FastAPI Backend
+### 1. Prerequisites
+- macOS Apple Silicon (M1/M2/M3)
+- Ollama running locally: `ollama run llama3.2:3b`
+- Python 3.9+ with virtualenv in `.venv`
+- Node.js 18+
+
+### 2. Start the FastAPI Backend
 ```bash
 # In ~/Desktop/askim
 source .venv/bin/activate
 cd backend
 python -m uvicorn app.main:app --reload --port 8000
 ```
-Interactive API documentation: [http://localhost:8000/docs](http://localhost:8000/docs)
+- Interactive Swagger API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+- Health Check: [http://localhost:8000/health](http://localhost:8000/health)
 
-### 2. Start the React Frontend
+### 3. Start the React Frontend Dashboard
 ```bash
 # In ~/Desktop/askim/frontend
 npm run dev
 ```
 Open [http://localhost:5173](http://localhost:5173) in your browser:
-- **Voice Assistant:** Record daily updates with local Whisper transcription.
-- **Personal Memory:** Search daily summaries, habit records, and export data.
-- **Trackers & Analytics:** View your interactive Recharts weight progression and gym duration charts, plus weekly progress report.
+- 🎙️ **Voice Assistant:** Push-to-talk recording, glowing waveform orb, local STT, editable transcript, AI auto-extraction.
+- ⚡ **My Day:** Daily schedule, routine completion checklist, and Recommended Next Action.
+- 🌳 **Life Tree:** Hierarchical clusters (Health, Work, Growth, Finance, Personal) and cluster workspaces.
+- 🔍 **Research:** Ingest personal notes/protocols, SQLite FTS5 search, and citation-backed Q&A.
+- 📊 **Trackers:** Interactive Recharts area and bar charts, verified weekly report card, and quick log forms.
+- 🧠 **Memory:** Searchable personal memory history, measurement reviews, and full JSON export.
 
 ---
 
 ## Automated Test Suite
 
+Run the full automated test suite:
 ```bash
 PYTHONPATH=backend .venv/bin/pytest backend/tests -v
 ```
 
-**Results: 16/16 Passed (100% pass rate):**
-- Deterministic pandas weight analytics calculations
-- Deterministic pandas gym analytics calculations
-- **Phase 4 Completion Test:** Weekly report values match database records
-- Database persistence and hierarchical Life Tree node relations
-- Real audio upload, Whisper transcription, audio replay, and transcript editing
-- Structured memory extraction schema validation
-- Application restart persistence verification
+**Results: 20/20 Passed (100% pass rate):**
+- ✅ `test_config.py`: Settings, defaults, environment overrides, cached settings.
+- ✅ `test_db.py`: Database models, WAL mode, foreign keys, Life Tree nodes.
+- ✅ `test_ollama.py`: Local Ollama connection, health check, live inference.
+- ✅ `test_voice_audio.py`: Local Faster-Whisper STT, audio replay, transcript editing.
+- ✅ `test_voice_stub.py`: Voice mock pipeline endpoint flow.
+- ✅ `test_memory.py`: Extraction schema validation, memory endpoints, restart persistence.
+- ✅ `test_analytics.py`: Pandas deterministic calculations, 7-day rolling average, gym duration, and verified weekly report.
+- ✅ `test_life_os.py`: FTS5 document indexing, source-backed Research Assistant with citations, Life Tree clusters, My Day routine scheduler, and Next Best Action recommendation.

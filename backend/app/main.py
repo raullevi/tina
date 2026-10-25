@@ -19,12 +19,20 @@ from app.db.models import (
     PersonalFact,
     Transcript,
     VoiceSession,
+    Document,
+    ResearchSource,
+    Goal,
+    LifeNode,
+    RoutineRule,
+    TaskOccurrence,
 )
 from app.db.session import get_db, init_db
 from app.services.extractor import ExtractionService
 from app.services.ollama import OllamaService
 from app.services.transcription import TranscriptionService
 from app.services.analytics import AnalyticsEngine
+from app.services.research import ResearchService
+from app.services.scheduler import LifeOSService
 
 settings = get_settings()
 
@@ -921,3 +929,175 @@ async def log_gym_manual(
         notes=act.notes,
         source_transcript_id=act.source_transcript_id,
     )
+
+
+# ---------------------------------------------------------
+# Phase 5: Documents & Research Assistant (FTS5) Endpoints
+# ---------------------------------------------------------
+
+research_service = ResearchService(ollama_service=ollama_service)
+
+
+class CreateDocumentRequest(BaseModel):
+    title: str = Field(..., min_length=1)
+    content: str = Field(..., min_length=1)
+    filename: Optional[str] = None
+
+
+class ResearchQueryRequest(BaseModel):
+    question: str = Field(..., min_length=1)
+
+
+@app.post("/api/documents", tags=["Research"])
+async def create_document(
+    req: CreateDocumentRequest,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Import a personal document and index with SQLite FTS5."""
+    doc = Document(
+        title=req.title,
+        content=req.content,
+        filename=req.filename,
+    )
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+
+    ResearchService.index_document(db, doc.id, doc.title, doc.content)
+    return {"id": doc.id, "title": doc.title, "status": "indexed"}
+
+
+@app.get("/api/documents", tags=["Research"])
+async def list_documents(db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
+    """List imported personal documents."""
+    docs = db.query(Document).order_by(Document.id.desc()).all()
+    return [{"id": d.id, "title": d.title, "filename": d.filename, "created_at": d.created_at.isoformat()} for d in docs]
+
+
+@app.get("/api/documents/search", tags=["Research"])
+async def search_documents_fts(
+    q: str = Query(..., min_length=1),
+    db: Session = Depends(get_db),
+) -> List[Dict[str, Any]]:
+    """Search personal documents using SQLite FTS5."""
+    return ResearchService.search_documents(db, q)
+
+
+@app.post("/api/research/query", tags=["Research"])
+async def query_research_assistant(
+    req: ResearchQueryRequest,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Ask a question grounded in personal documents with source citations."""
+    return await research_service.answer_with_research(req.question, db)
+
+
+# ---------------------------------------------------------
+# Phase 6: Life Tree, Routines, My Day, Next Action Endpoints
+# ---------------------------------------------------------
+
+class CreateLifeNodeRequest(BaseModel):
+    name: str = Field(..., min_length=1)
+    type: str = Field(default="cluster")
+    description: Optional[str] = None
+    parent_id: Optional[int] = None
+
+
+class CreateRoutineRequest(BaseModel):
+    node_id: int
+    name: str = Field(..., min_length=1)
+    schedule_type: str = Field(default="daily", description="daily, weekly, interval")
+    interval_days: Optional[int] = None
+    weekday: Optional[int] = None
+    duration_minutes: Optional[int] = None
+    details: Optional[str] = None
+
+
+@app.get("/api/life-tree", tags=["Life OS"])
+async def get_life_tree(db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
+    """Retrieve full hierarchical Life Tree with cluster stats and active routines."""
+    return LifeOSService.get_life_tree(db)
+
+
+@app.post("/api/life-tree/nodes", tags=["Life OS"])
+async def create_life_node(
+    req: CreateLifeNodeRequest,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Create a new cluster or life tree node."""
+    node = LifeNode(
+        name=req.name,
+        type=req.type,
+        description=req.description,
+        parent_id=req.parent_id,
+    )
+    db.add(node)
+    db.commit()
+    db.refresh(node)
+    return {"id": node.id, "name": node.name, "type": node.type}
+
+
+@app.post("/api/routines", tags=["Life OS"])
+async def create_routine(
+    req: CreateRoutineRequest,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Create a recurring routine rule under a life cluster."""
+    routine = RoutineRule(
+        node_id=req.node_id,
+        name=req.name,
+        schedule_type=req.schedule_type,
+        interval_days=req.interval_days,
+        weekday=req.weekday,
+        duration_minutes=req.duration_minutes,
+        details=req.details,
+    )
+    db.add(routine)
+    db.commit()
+    db.refresh(routine)
+    return {"id": routine.id, "name": routine.name, "status": "created"}
+
+
+@app.get("/api/routines", tags=["Life OS"])
+async def list_routines(db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
+    """List all scheduled routine rules."""
+    routines = db.query(RoutineRule).all()
+    return [
+        {
+            "id": r.id,
+            "name": r.name,
+            "schedule_type": r.schedule_type,
+            "duration_minutes": r.duration_minutes,
+            "cluster": r.node.name if r.node else None,
+            "enabled": r.enabled,
+        }
+        for r in routines
+    ]
+
+
+@app.get("/api/tasks/due", tags=["Life OS"])
+async def get_due_tasks_today(db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
+    """Retrieve all tasks due today for 'My Day' plan."""
+    return LifeOSService.get_or_generate_due_tasks(db)
+
+
+@app.post("/api/task_occurrences/{occurrence_id}/complete", tags=["Life OS"])
+async def complete_task_occurrence(
+    occurrence_id: int,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Mark a task occurrence as completed."""
+    occ = db.query(TaskOccurrence).filter(TaskOccurrence.id == occurrence_id).first()
+    if not occ:
+        raise HTTPException(status_code=404, detail="Task occurrence not found")
+
+    occ.status = "completed"
+    occ.completed_at = datetime.utcnow()
+    db.commit()
+    return {"status": "completed", "task_id": occ.id, "title": occ.title}
+
+
+@app.get("/api/next_action", tags=["Life OS"])
+async def get_next_action(db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """Get the next recommended action based on today's schedule."""
+    return LifeOSService.get_next_best_action(db)
