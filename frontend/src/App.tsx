@@ -1,4 +1,4 @@
-import { VoicePhoneView } from "./components/VoicePhoneView";
+import { VoiceDesktopView } from "./components/VoiceDesktopView";
 import { RollingDialNav } from "./components/RollingDialNav";
 import type { NavItem } from "./components/RollingDialNav";
 import { useState, useEffect, useRef } from "react";
@@ -725,17 +725,9 @@ export function App() {
       </aside>
 
 
-      {/* VIEW 1: Voice Assistant (Luxury OLED Mobile Interface) */}
+      {/* VIEW 1: Voice Assistant (Native Luxury PC Interface) */}
       {activeTab === "voice" && (
-        <>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: "8px" }}>
-            <RollingDialNav
-              items={NAV_ITEMS}
-              activeId={activeTab}
-              onSelect={switchTab}
-            />
-          </div>
-          <VoicePhoneView
+        <VoiceDesktopView
           isRecording={isRecording}
           statusText={statusText}
           toggleRecording={toggleRecording}
@@ -747,9 +739,7 @@ export function App() {
           isProcessing={isProcessing}
           setActiveSession={setActiveSession}
           onSendMessage={handleSendDirectPrompt}
-          onNavigateTab={switchTab}
         />
-        </>
       )}
 
       {/* VIEW 2: My Day (Daily Plan & Next Action) */}
