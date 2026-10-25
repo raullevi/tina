@@ -82,7 +82,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
     {
       id: "3",
       sender: "user",
-      senderName: "John",
+      senderName: "You",
       text: "Let's aim for tomorrow.",
       timestamp: "9:41 AM",
     },
@@ -96,7 +96,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
     {
       id: "5",
       sender: "user",
-      senderName: "John",
+      senderName: "You",
       text: "7 AM would be perfect.",
       timestamp: "9:41 AM",
     },
@@ -104,7 +104,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
       id: "6",
       sender: "assistant",
       senderName: "Tina",
-      text: "Got it, John! Scheduled in your daily plan.",
+      text: "Got it! Scheduled in your daily plan.",
       timestamp: "9:41 AM",
     },
   ]);
@@ -119,7 +119,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
         const newMsg: ChatMessage = {
           id: `user-${activeSession.sessionId}-${Date.now()}`,
           sender: "user",
-          senderName: "John",
+          senderName: "You",
           text: userText,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           audioUrl: activeSession.audioUrl,

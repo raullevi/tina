@@ -27,20 +27,38 @@ class ExtractedFact(BaseModel):
     value: str
 
 
+class ExtractedTask(BaseModel):
+    title: str
+    cluster: str = Field(default="Personal Life")
+    schedule_type: str = Field(default="daily")
+    duration_minutes: Optional[int] = None
+    notes: Optional[str] = None
+
+
 class ExtractionResult(BaseModel):
     daily_summary: Optional[str] = None
     activities: List[ExtractedActivity] = Field(default_factory=list)
     measurements: List[ExtractedMeasurement] = Field(default_factory=list)
     facts: List[ExtractedFact] = Field(default_factory=list)
+    tasks: List[ExtractedTask] = Field(default_factory=list)
 
 
-EXTRACTION_SYSTEM_PROMPT = """You are Tina's Personal Memory Extraction Engine.
-Analyze the user's spoken transcript and extract structured personal records.
+EXTRACTION_SYSTEM_PROMPT = """You are Tina's Personal Memory and Action Extraction Engine.
+Analyze the user's transcript or input and extract structured personal records and any tasks/routines requested.
 Output STRICT, VALID JSON ONLY. Do not include markdown codeblocks or conversational text.
 
 JSON Schema format:
 {
   "daily_summary": "1 concise sentence summarizing what the user did or noted.",
+  "tasks": [
+    {
+      "title": "task title or action to do",
+      "cluster": "cluster name (e.g. 'Health & Fitness', 'Work & Projects', 'Personal Life', 'Finance & Wealth', 'Growth & Learning', or custom user cluster)",
+      "schedule_type": "daily" | "weekly" | "interval",
+      "duration_minutes": number or null,
+      "notes": "extra context or null"
+    }
+  ],
   "activities": [
     {
       "category": "gym" | "study" | "work" | "chore" | "general",

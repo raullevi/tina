@@ -62,6 +62,91 @@ class LifeOSService:
             db.commit()
 
     @classmethod
+    def create_task_in_cluster(
+        cls,
+        db: Session,
+        title: str,
+        cluster_name: str,
+        schedule_type: str = "daily",
+        duration_minutes: Optional[int] = None,
+        due_date: Optional[date] = None,
+        details: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Creates a routine rule and today's task occurrence under a specific Life Tree cluster.
+        Finds existing cluster (case-insensitive or partial match) or creates a new one.
+        """
+        cls.ensure_default_clusters(db)
+        clean_cluster = (cluster_name or "Personal Life").strip()
+        clean_title = (title or "New Task").strip()
+        target_due_date = due_date or date.today()
+
+        # 1. Search existing clusters
+        all_clusters = db.query(LifeNode).filter(LifeNode.type == "cluster").all()
+        matched_cluster = None
+
+        # Exact case-insensitive match
+        for c in all_clusters:
+            if c.name.lower() == clean_cluster.lower():
+                matched_cluster = c
+                break
+
+        # Partial substring match (e.g. 'health' matches 'Health & Fitness')
+        if not matched_cluster:
+            target_lower = clean_cluster.lower()
+            for c in all_clusters:
+                c_lower = c.name.lower()
+                if target_lower in c_lower or c_lower in target_lower:
+                    matched_cluster = c
+                    break
+
+        # If no matching cluster, create a new one
+        if not matched_cluster:
+            matched_cluster = LifeNode(
+                name=clean_cluster.title(),
+                type="cluster",
+                description=f"Cluster for {clean_cluster.title()} tasks",
+                importance=1,
+            )
+            db.add(matched_cluster)
+            db.flush()
+
+        # Create RoutineRule
+        routine = RoutineRule(
+            node_id=matched_cluster.id,
+            name=clean_title,
+            schedule_type=schedule_type,
+            duration_minutes=duration_minutes or 30,
+            details=details or f"Created via Tina in cluster '{matched_cluster.name}'",
+            enabled=True,
+        )
+        db.add(routine)
+        db.flush()
+
+        # Create TaskOccurrence for today so it appears in My Day immediately
+        occurrence = TaskOccurrence(
+            routine_id=routine.id,
+            title=clean_title,
+            due_date=target_due_date,
+            status="pending",
+        )
+        db.add(occurrence)
+        db.commit()
+        db.refresh(occurrence)
+
+        return {
+            "task_id": occurrence.id,
+            "routine_id": routine.id,
+            "title": occurrence.title,
+            "cluster": matched_cluster.name,
+            "cluster_id": matched_cluster.id,
+            "schedule_type": routine.schedule_type,
+            "duration_minutes": routine.duration_minutes,
+            "due_date": occurrence.due_date.isoformat(),
+            "status": occurrence.status,
+        }
+
+    @classmethod
     def get_or_generate_due_tasks(cls, db: Session, target_date: Optional[date] = None) -> List[Dict[str, Any]]:
         """Return all tasks due for the specified day (My Day), creating task occurrences if needed."""
         cls.ensure_default_clusters(db)

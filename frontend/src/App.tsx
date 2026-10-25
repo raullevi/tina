@@ -595,7 +595,7 @@ export function App() {
           },
         ]);
 
-        await Promise.all([loadMemoryData(), loadAnalytics(), loadMyDay()]);
+        await Promise.all([loadMemoryData(), loadAnalytics(), loadMyDay(), loadLifeTree()]);
       }
     } catch (err) {
       console.error("Tina processing error:", err);
@@ -770,6 +770,7 @@ export function App() {
           audioUrl: prev ? prev.audioUrl : "",
           aiReply: reply,
         }));
+        await Promise.all([loadMyDay(), loadLifeTree(), loadMemoryData()]);
         return reply;
       }
       return "Recorded and processed by Tina.";
@@ -837,6 +838,7 @@ export function App() {
           text: reply,
         };
         setChatMessages((prev) => [...prev, assistantMsg]);
+        await Promise.all([loadMyDay(), loadLifeTree(), loadMemoryData()]);
       } else {
         const fallbackMsg: ChatMessage = {
           id: `asst-${Date.now()}`,

@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import date, datetime
 import os
+import re
 import shutil
 from typing import Any, Dict, List, Optional
 from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile, status
@@ -365,12 +366,67 @@ async def update_session_transcript(
     )
 
 
+def try_parse_task_intent(raw_text: str) -> Optional[Dict[str, str]]:
+    """Parse task and cluster intent from user voice or text input."""
+    text_clean = raw_text.strip()
+
+    # Pattern 1: (create|add|schedule|set up) (new )?task in (this cluster|cluster )?<cluster>[:\s-]+<title>
+    p1 = re.compile(
+        r"^(?:create|add|schedule|set up|insert)(?:\s+a)?(?:\s+new)?\s+task\s+(?:in|under)\s+(?:this\s+cluster\s+|cluster\s+)?([A-Za-z0-9\s&]+?)(?:\s*[:\-–—]\s*|\s+named\s+|\s+called\s+|\s+to\s+)(.+)$",
+        re.IGNORECASE,
+    )
+    m1 = p1.match(text_clean)
+    if m1:
+        cluster = m1.group(1).strip()
+        title = m1.group(2).strip()
+        if cluster and title:
+            return {"cluster": cluster, "title": title}
+
+    # Pattern 2: (create|add|schedule) (new )?task[:\s]+<title>\s+(in|under)\s+(this cluster|cluster )?<cluster>
+    p2 = re.compile(
+        r"^(?:create|add|schedule)(?:\s+a)?(?:\s+new)?\s+task(?:\s*[:\-–—]\s*|\s+)(.+?)\s+(?:in|under)\s+(?:this\s+cluster\s+|cluster\s+)?([A-Za-z0-9\s&]+)$",
+        re.IGNORECASE,
+    )
+    m2 = p2.match(text_clean)
+    if m2:
+        title = m2.group(1).strip()
+        cluster = m2.group(2).strip()
+        if cluster and title:
+            return {"cluster": cluster, "title": title}
+
+    # Pattern 3: in (cluster )?<cluster>[:\s]+(create|add|schedule) (new )?task[:\s]+<title>
+    p3 = re.compile(
+        r"^(?:in|under)\s+(?:this\s+cluster\s+|cluster\s+)?([A-Za-z0-9\s&]+?)(?:\s*[:\-–—]\s*|\s+)(?:create|add|schedule)(?:\s+a)?(?:\s+new)?\s+task(?:\s*[:\-–—]\s*|\s+)(.+)$",
+        re.IGNORECASE,
+    )
+    m3 = p3.match(text_clean)
+    if m3:
+        cluster = m3.group(1).strip()
+        title = m3.group(2).strip()
+        if cluster and title:
+            return {"cluster": cluster, "title": title}
+
+    # Pattern 4: new task in <cluster>[:\s]+<title>
+    p4 = re.compile(
+        r"^new\s+task\s+(?:in|under)\s+(?:this\s+cluster\s+|cluster\s+)?([A-Za-z0-9\s&]+?)(?:\s*[:\-–—]\s*|\s+to\s+|\s+)(.+)$",
+        re.IGNORECASE,
+    )
+    m4 = p4.match(text_clean)
+    if m4:
+        cluster = m4.group(1).strip()
+        title = m4.group(2).strip()
+        if cluster and title:
+            return {"cluster": cluster, "title": title}
+
+    return None
+
+
 @app.post("/api/voice/sessions/{session_id}/process", response_model=ProcessSessionResponse, tags=["Voice"])
 async def process_session_with_ai(
     session_id: int,
     db: Session = Depends(get_db),
 ) -> ProcessSessionResponse:
-    """Send confirmed transcript to Ollama LLM and auto-trigger memory extraction."""
+    """Send confirmed transcript to Ollama LLM and auto-trigger memory & task extraction."""
     transcript = db.query(Transcript).filter(Transcript.session_id == session_id).first()
     if not transcript:
         raise HTTPException(status_code=404, detail="Transcript not found for session")
@@ -388,7 +444,24 @@ async def process_session_with_ai(
         system_prompt=system_prompt,
     )
 
-    # Automatically extract structured memory entities
+    created_task_confirmations = []
+
+    # 1. Direct regex check for fast task creation intent
+    direct_task = try_parse_task_intent(active_text)
+    if direct_task:
+        try:
+            task_info = LifeOSService.create_task_in_cluster(
+                db=db,
+                title=direct_task["title"],
+                cluster_name=direct_task["cluster"],
+            )
+            created_task_confirmations.append(
+                f"• Created task **{task_info['title']}** in cluster **{task_info['cluster']}**"
+            )
+        except Exception as exc:
+            print(f"Direct task creation error: {exc}")
+
+    # 2. Automatically extract structured memory entities and AI-detected tasks
     try:
         extraction = await extraction_service.extract_from_text(active_text)
         if extraction.daily_summary:
@@ -421,14 +494,37 @@ async def process_session_with_ai(
                 value=f.value,
                 source_transcript_id=transcript.id,
             ))
+
+        # Process any AI-extracted tasks not already created
+        for t in extraction.tasks:
+            if not any(t.title.lower() in c.lower() for c in created_task_confirmations):
+                try:
+                    task_info = LifeOSService.create_task_in_cluster(
+                        db=db,
+                        title=t.title,
+                        cluster_name=t.cluster,
+                        schedule_type=t.schedule_type or "daily",
+                        duration_minutes=t.duration_minutes,
+                        details=t.notes,
+                    )
+                    created_task_confirmations.append(
+                        f"• Created task **{task_info['title']}** in cluster **{task_info['cluster']}**"
+                    )
+                except Exception as t_err:
+                    print(f"AI task creation error: {t_err}")
+
         db.commit()
     except Exception as exc:
         print(f"Auto-extraction warning: {exc}")
 
+    reply = ollama_res.get("response", "Noted.").strip()
+    if created_task_confirmations:
+        reply += "\n\n" + "\n".join(created_task_confirmations) + "\n\n*(Scheduled in Life Tree & active in My Day)*"
+
     return ProcessSessionResponse(
         session_id=session_id,
         processed_text=active_text,
-        reply=ollama_res.get("response", "Noted."),
+        reply=reply,
     )
 
 
@@ -988,7 +1084,66 @@ async def query_research_assistant(
     req: ResearchQueryRequest,
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
-    """Ask a question grounded in personal documents with source citations."""
+    """Ask a question grounded in personal documents with source citations, or create tasks in life clusters."""
+    text_clean = req.question.strip()
+
+    # 1. Fast regex match for task creation in cluster
+    direct_task = try_parse_task_intent(text_clean)
+    if direct_task:
+        try:
+            task_info = LifeOSService.create_task_in_cluster(
+                db=db,
+                title=direct_task["title"],
+                cluster_name=direct_task["cluster"],
+            )
+            return {
+                "question": req.question,
+                "answer": (
+                    f"Created new task **{task_info['title']}** under cluster **{task_info['cluster']}**.\n\n"
+                    f"It has been saved to your **Life Tree** and is now active in **My Day**."
+                ),
+                "sources": [],
+                "created_task": task_info,
+            }
+        except Exception as exc:
+            print(f"Error creating task from query intent: {exc}")
+
+    # 2. Check for task creation keywords that LLM extraction should handle
+    lower_q = text_clean.lower()
+    if ("task" in lower_q or "routine" in lower_q) and (
+        "create" in lower_q
+        or "add" in lower_q
+        or "new" in lower_q
+        or "schedule" in lower_q
+        or "cluster" in lower_q
+    ):
+        try:
+            extraction = await extraction_service.extract_from_text(text_clean)
+            if extraction.tasks:
+                created = []
+                for t in extraction.tasks:
+                    info = LifeOSService.create_task_in_cluster(
+                        db=db,
+                        title=t.title,
+                        cluster_name=t.cluster,
+                        schedule_type=t.schedule_type or "daily",
+                        duration_minutes=t.duration_minutes,
+                        details=t.notes,
+                    )
+                    created.append(f"• **{info['title']}** in cluster **{info['cluster']}**")
+                return {
+                    "question": req.question,
+                    "answer": (
+                        "Created the following task(s):\n\n"
+                        + "\n".join(created)
+                        + "\n\nSaved to your **Life Tree** and active in **My Day**."
+                    ),
+                    "sources": [],
+                    "created_tasks": created,
+                }
+        except Exception as exc:
+            print(f"Extraction error for task query: {exc}")
+
     return await research_service.answer_with_research(req.question, db)
 
 
@@ -1101,3 +1256,28 @@ async def complete_task_occurrence(
 async def get_next_action(db: Session = Depends(get_db)) -> Dict[str, Any]:
     """Get the next recommended action based on today's schedule."""
     return LifeOSService.get_next_best_action(db)
+
+
+class CreateTaskInClusterRequest(BaseModel):
+    title: str = Field(..., min_length=1)
+    cluster: str = Field(default="Personal Life")
+    schedule_type: str = Field(default="daily")
+    duration_minutes: Optional[int] = None
+    details: Optional[str] = None
+
+
+@app.post("/api/tasks/create", tags=["Life OS"])
+async def create_task_in_cluster_endpoint(
+    req: CreateTaskInClusterRequest,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Explicitly create a task and routine under a life cluster."""
+    return LifeOSService.create_task_in_cluster(
+        db=db,
+        title=req.title,
+        cluster_name=req.cluster,
+        schedule_type=req.schedule_type,
+        duration_minutes=req.duration_minutes,
+        details=req.details,
+    )
+
