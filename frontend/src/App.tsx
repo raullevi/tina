@@ -999,7 +999,10 @@ export function App() {
             </div>
             <div>
               <div className="user-name">User</div>
-              <div className="user-badge">Apple Silicon M4 • Llama 3.1 8B</div>
+              <div className="user-badge">
+                <span className={`badge-dot ${backendOnline && ollamaOnline ? "" : "offline"}`} style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", marginRight: 6, verticalAlign: "middle" }} />
+                Apple Silicon M4 • Llama 3.1 8B
+              </div>
             </div>
           </div>
         </div>
@@ -1022,27 +1025,8 @@ export function App() {
               </button>
             )}
             <div className="top-bar-title">
-              <span>Thena 3.1 8B</span>
-              <span style={{ fontSize: "0.75rem", color: "#a79bb5" }}>▾</span>
+              <span>Thena</span>
             </div>
-          </div>
-
-          <div className="top-bar-actions">
-            <div className="badge">
-              <span className={`badge-dot ${backendOnline ? "" : "offline"}`} />
-              <span>FastAPI</span>
-            </div>
-            <div className="badge">
-              <span className={`badge-dot ${ollamaOnline ? "" : "offline"}`} />
-              <span>Llama 3.1 8B</span>
-            </div>
-            <button className="top-action-btn" title="Share Chat">
-              <span>↗</span>
-              <span>Share</span>
-            </button>
-            <button className="top-action-btn" title="Options">
-              <span>•••</span>
-            </button>
           </div>
         </header>
 
@@ -1194,16 +1178,6 @@ export function App() {
                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                           </svg>
                         </button>
-                        <button className="action-tool-btn" title="Good response">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
-                          </svg>
-                        </button>
-                        <button className="action-tool-btn" title="Bad response">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3" />
-                          </svg>
-                        </button>
                         <button
                           className="action-tool-btn"
                           title="Read aloud (Listen)"
@@ -1215,15 +1189,6 @@ export function App() {
                             <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
                           </svg>
                         </button>
-                        <button className="action-tool-btn" title="Share">
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="18" cy="5" r="3" />
-                            <circle cx="6" cy="12" r="3" />
-                            <circle cx="18" cy="19" r="3" />
-                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-                          </svg>
-                        </button>
                         <button
                           className="action-tool-btn"
                           title="Regenerate"
@@ -1233,9 +1198,6 @@ export function App() {
                             <polyline points="23 4 23 10 17 10" />
                             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
                           </svg>
-                        </button>
-                        <button className="action-tool-btn" title="More">
-                          •••
                         </button>
                       </div>
                     )}
