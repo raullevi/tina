@@ -6,11 +6,16 @@ class Settings(BaseSettings):
     """Application settings for SKIM backend."""
 
     app_name: str = "SKIM Backend"
-    app_version: str = "0.1.0"
+    app_version: str = "0.2.0"
     debug: bool = False
 
     # Database Configuration
     database_url: str = "sqlite:///./skim.db"
+
+    # Audio & Voice Configuration
+    recordings_dir: str = "recordings"
+    whisper_model: str = "tiny.en"  # tiny.en is ~75MB, fast and accurate for English
+    whisper_compute_type: str = "int8"
 
     # Ollama Local LLM Configuration
     ollama_base_url: str = "http://localhost:11434"

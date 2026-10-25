@@ -11,8 +11,9 @@ class VoiceSession(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    status = Column(String(50), default="completed", nullable=False)  # recorded, transcribed, completed, failed
+    status = Column(String(50), default="recorded", nullable=False)  # recorded, transcribed, completed, failed
     duration_seconds = Column(Float, nullable=True)
+    file_path = Column(String(500), nullable=True)
 
     transcripts = relationship("Transcript", back_populates="session", cascade="all, delete-orphan")
 

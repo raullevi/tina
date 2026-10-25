@@ -1,5 +1,5 @@
 from typing import Generator
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -37,6 +37,17 @@ def get_db() -> Generator:
 
 
 def init_db() -> None:
-    """Create all tables defined in models."""
+    """Create all tables and perform lightweight schema migrations if needed."""
     import app.db.models  # noqa: F401
     Base.metadata.create_all(bind=engine)
+
+    # Lightweight migration: Ensure voice_sessions has file_path column
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("SELECT file_path FROM voice_sessions LIMIT 1"))
+        except Exception:
+            try:
+                conn.execute(text("ALTER TABLE voice_sessions ADD COLUMN file_path VARCHAR(500)"))
+                conn.commit()
+            except Exception:
+                pass
