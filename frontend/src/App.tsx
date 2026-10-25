@@ -1180,7 +1180,9 @@ export function App() {
                     )}
                   </div>
                   <div className="message-content-wrapper">
-                    <div className="message-sender-name">{msg.senderName}</div>
+                    <div className="message-sender-name">
+                      {msg.sender === "user" ? "Raul" : (msg.senderName || "Tina")}
+                    </div>
                     <div className="message-text-card">
                       {renderMarkdown(msg.text)}
                     </div>

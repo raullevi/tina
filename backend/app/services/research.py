@@ -4,7 +4,15 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import or_, text
 from sqlalchemy.orm import Session
 
-from app.db.models import Document, ResearchSource
+from app.db.models import (
+    Activity,
+    DailyLog,
+    Document,
+    Measurement,
+    PersonalFact,
+    ResearchSource,
+    TaskOccurrence,
+)
 from app.services.ollama import OllamaService
 
 STOP_WORDS = {"what", "is", "my", "the", "a", "an", "and", "or", "in", "on", "at", "to", "for", "of", "with", "about"}
@@ -107,38 +115,88 @@ class ResearchService:
     async def answer_with_research(self, question: str, db: Session) -> Dict[str, Any]:
         """
         Research Assistant query:
-        1. Search personal documents with FTS5
-        2. Prompt local Ollama with retrieved context and strict citation instruction
-        3. Save cited research sources
+        1. Retrieve personal memory vault records (facts, daily logs, habits, measurements, tasks)
+        2. Search personal documents with FTS5
+        3. Prompt local Ollama with full personal memory + document context
+        4. Save cited research sources
         """
+        # 1. Gather Personal Memory Vault context
+        memory_blocks = []
+
+        # Saved Personal Facts & Goals
+        facts = db.query(PersonalFact).order_by(PersonalFact.id.desc()).limit(15).all()
+        if facts:
+            fact_lines = [f"- [{f.category.title()}] {f.key}: {f.value}" for f in facts if f.key and f.value and f.value != "null"]
+            if fact_lines:
+                memory_blocks.append("### Saved Personal Facts & Goals:\n" + "\n".join(fact_lines))
+
+        # Recent Daily Summaries
+        daily_logs = db.query(DailyLog).order_by(DailyLog.log_date.desc(), DailyLog.id.desc()).limit(5).all()
+        if daily_logs:
+            log_lines = [f"- {l.log_date.isoformat()}: {l.summary}" for l in daily_logs if l.summary]
+            if log_lines:
+                memory_blocks.append("### Recent Daily Summaries:\n" + "\n".join(log_lines))
+
+        # Recent Activities
+        activities = db.query(Activity).order_by(Activity.activity_date.desc(), Activity.id.desc()).limit(7).all()
+        if activities:
+            act_lines = [
+                f"- {a.activity_date.isoformat()} [{a.category}]: {a.name}" + (f" ({a.duration_minutes} min)" if a.duration_minutes else "") + (f" - {a.notes}" if a.notes else "")
+                for a in activities if a.name
+            ]
+            if act_lines:
+                memory_blocks.append("### Recent Logged Activities:\n" + "\n".join(act_lines))
+
+        # Health & Body Measurements
+        measurements = db.query(Measurement).order_by(Measurement.measurement_date.desc(), Measurement.id.desc()).limit(6).all()
+        if measurements:
+            m_lines = [f"- {m.measurement_date.isoformat()}: {m.metric} = {m.value} {m.unit}" for m in measurements]
+            if m_lines:
+                memory_blocks.append("### Health & Physical Metrics:\n" + "\n".join(m_lines))
+
+        # Scheduled Tasks & Routines
+        tasks = db.query(TaskOccurrence).order_by(TaskOccurrence.due_date.desc(), TaskOccurrence.id.desc()).limit(7).all()
+        if tasks:
+            t_lines = [f"- {t.title} [Status: {t.status}, Due: {t.due_date.isoformat()}]" for t in tasks]
+            if t_lines:
+                memory_blocks.append("### Active Tasks & Routines:\n" + "\n".join(t_lines))
+
+        memory_vault_context = "\n\n".join(memory_blocks) if memory_blocks else "No memory records currently stored."
+
+        # 2. Search relevant uploaded personal documents
         relevant_docs = self.search_documents(db, question, limit=4)
-        
-        context_blocks = []
+        doc_blocks = []
         sources_list = []
         for i, d in enumerate(relevant_docs, 1):
             doc_rec = db.query(Document).filter(Document.id == d["id"]).first()
             content_snippet = doc_rec.content[:500] if doc_rec else d["snippet"]
-            context_blocks.append(f"[Source {i}: {d['title']}]\n{content_snippet}")
+            doc_blocks.append(f"[Source {i}: {d['title']}]\n{content_snippet}")
             sources_list.append({
                 "source_id": i,
                 "title": d["title"],
                 "snippet": d["snippet"],
             })
 
-        combined_context = "\n\n".join(context_blocks) if context_blocks else "No relevant personal documents found."
+        documents_context = "\n\n".join(doc_blocks) if doc_blocks else "No specific documents matching search keywords."
 
+        # 3. Assemble prompt grounded in both memory vault and documents
         system_prompt = (
-            "You are Tina's Research Assistant for Raul. The primary language is always English. Always formulate your answer strictly in clear, articulate English. "
-            "Answer Raul's question accurately using ONLY the provided personal documents context. "
-            "Cite your sources (e.g. [Source 1]). If the context does not contain the answer, clearly state that rather than inventing facts."
+            "You are Tina, a private local AI Personal Life Operating System assistant for Raul. "
+            "The primary language is always English. Always formulate your response strictly in clear, articulate, helpful English. "
+            "Use Raul's personal memory vault (facts, daily logs, habits, metrics, and tasks) and any provided reference documents "
+            "to answer his questions and summarize his records directly and accurately."
         )
 
-        user_prompt = f"Personal Knowledge Context:\n{combined_context}\n\nQuestion: {question}"
-        
+        user_prompt = (
+            f"Raul's Personal Memory Vault:\n{memory_vault_context}\n\n"
+            f"Reference Documents:\n{documents_context}\n\n"
+            f"Question from Raul: {question}"
+        )
+
         ai_response = await self.ollama.generate(prompt=user_prompt, system_prompt=system_prompt)
         answer_text = ai_response.get("response", "No answer could be generated.")
 
-        # Save to research_sources
+        # Save to research_sources if any
         for s in sources_list:
             db.add(ResearchSource(
                 title=s["title"],
