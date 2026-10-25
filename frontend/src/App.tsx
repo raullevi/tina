@@ -990,16 +990,16 @@ export function App() {
                     <AreaChart data={weightAnalytics.time_series}>
                       <defs>
                         <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="#38bdf8" stopOpacity={0.0} />
+                          <stop offset="5%" stopColor="#c084fc" stopOpacity={0.5} />
+                          <stop offset="95%" stopColor="#c084fc" stopOpacity={0.0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                      <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
-                      <YAxis domain={["dataMin - 1", "dataMax + 1"]} stroke="#64748b" fontSize={11} />
-                      <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: "8px" }} />
-                      <Area type="monotone" dataKey="value" stroke="#38bdf8" strokeWidth={2} fill="url(#weightGrad)" name="Weight" />
-                      <Area type="monotone" dataKey="rolling_avg" stroke="#f59e0b" strokeWidth={2} strokeDasharray="4 4" fill="none" name="7-Day Avg" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#251c38" />
+                      <XAxis dataKey="date" stroke="#7d6e8c" fontSize={11} />
+                      <YAxis domain={["dataMin - 1", "dataMax + 1"]} stroke="#7d6e8c" fontSize={11} />
+                      <Tooltip contentStyle={{ background: "#0d0917", border: "1px solid rgba(192, 132, 252, 0.3)", borderRadius: "10px", color: "#f3e8ff" }} />
+                      <Area type="monotone" dataKey="value" stroke="#c084fc" strokeWidth={2.5} fill="url(#weightGrad)" name="Weight" />
+                      <Area type="monotone" dataKey="rolling_avg" stroke="#f472b6" strokeWidth={2} strokeDasharray="4 4" fill="none" name="7-Day Avg" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -1022,11 +1022,11 @@ export function App() {
                 <div className="chart-wrapper">
                   <ResponsiveContainer width="100%" height={240}>
                     <BarChart data={gymAnalytics.daily_breakdown}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                      <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
-                      <YAxis stroke="#64748b" fontSize={11} />
-                      <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: "8px" }} />
-                      <Bar dataKey="duration_minutes" fill="#10b981" radius={[4, 4, 0, 0]} name="Minutes" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#251c38" />
+                      <XAxis dataKey="date" stroke="#7d6e8c" fontSize={11} />
+                      <YAxis stroke="#7d6e8c" fontSize={11} />
+                      <Tooltip contentStyle={{ background: "#0d0917", border: "1px solid rgba(192, 132, 252, 0.3)", borderRadius: "10px", color: "#f3e8ff" }} />
+                      <Bar dataKey="duration_minutes" fill="#a855f7" radius={[6, 6, 0, 0]} name="Minutes" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

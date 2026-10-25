@@ -1,10 +1,10 @@
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color-scheme: dark;
-  color: #f1f5f9;
-  background-color: #050507;
+  color: #f3e8ff;
+  background-color: #030206;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -21,8 +21,8 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: radial-gradient(circle at 50% 20%, #111827 0%, #050507 70%);
-  color: #f8fafc;
+  background: radial-gradient(circle at 50% 15%, #130d22 0%, #030206 75%);
+  color: #f3e8ff;
 }
 
 button {
@@ -34,7 +34,7 @@ button {
 }
 
 button:focus-visible {
-  outline: 2px solid #38bdf8;
+  outline: 2px solid #c084fc;
   outline-offset: 2px;
 }
 
@@ -44,12 +44,12 @@ button:focus-visible {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: #07050d;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #1f1733;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #332552;
 }
