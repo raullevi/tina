@@ -28,8 +28,10 @@ class TranscriptionService:
     def _sync_transcribe(self, audio_path: str) -> Dict[str, Any]:
         """Synchronous transcription execution."""
         model = self._get_model()
+        # Always transcribe in English
         segments, info = model.transcribe(
             audio_path,
+            language=self.settings.whisper_language,
             beam_size=5,
             vad_filter=True,
         )

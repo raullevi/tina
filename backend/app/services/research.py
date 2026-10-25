@@ -128,7 +128,8 @@ class ResearchService:
         combined_context = "\n\n".join(context_blocks) if context_blocks else "No relevant personal documents found."
 
         system_prompt = (
-            "You are Tina's Research Assistant. Answer the user's question accurately using ONLY the provided personal documents context. "
+            "You are Tina's Research Assistant for Raul. The primary language is always English. Always formulate your answer strictly in clear, articulate English. "
+            "Answer Raul's question accurately using ONLY the provided personal documents context. "
             "Cite your sources (e.g. [Source 1]). If the context does not contain the answer, clearly state that rather than inventing facts."
         )
 

@@ -68,7 +68,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
     {
       id: "1",
       sender: "user",
-      senderName: "John",
+      senderName: "Raul",
       text: "Hi, Tina, can you set a meeting reminder for me?",
       timestamp: "9:40 AM",
     },
@@ -76,13 +76,13 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
       id: "2",
       sender: "assistant",
       senderName: "Tina",
-      text: "Of course, John. When would you like to schedule your event?",
+      text: "Of course, Raul. When would you like to schedule your event?",
       timestamp: "9:40 AM",
     },
     {
       id: "3",
       sender: "user",
-      senderName: "You",
+      senderName: "Raul",
       text: "Let's aim for tomorrow.",
       timestamp: "9:41 AM",
     },
@@ -96,7 +96,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
     {
       id: "5",
       sender: "user",
-      senderName: "You",
+      senderName: "Raul",
       text: "7 AM would be perfect.",
       timestamp: "9:41 AM",
     },
@@ -104,7 +104,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
       id: "6",
       sender: "assistant",
       senderName: "Tina",
-      text: "Got it! Scheduled in your daily plan.",
+      text: "Got it, Raul! Scheduled in your daily plan.",
       timestamp: "9:41 AM",
     },
   ]);
@@ -119,7 +119,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
         const newMsg: ChatMessage = {
           id: `user-${activeSession.sessionId}-${Date.now()}`,
           sender: "user",
-          senderName: "You",
+          senderName: "Raul",
           text: userText,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           audioUrl: activeSession.audioUrl,
@@ -168,7 +168,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
     const newMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       sender: "user",
-      senderName: "John",
+      senderName: "Raul",
       text: userText,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };

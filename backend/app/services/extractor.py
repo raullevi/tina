@@ -44,6 +44,7 @@ class ExtractionResult(BaseModel):
 
 
 EXTRACTION_SYSTEM_PROMPT = """You are Tina's Personal Memory and Action Extraction Engine.
+The primary language is always English. All extracted summaries, task titles, and field values must be in English.
 Analyze the user's transcript or input and extract structured personal records and any tasks/routines requested.
 Output STRICT, VALID JSON ONLY. Do not include markdown codeblocks or conversational text.
 

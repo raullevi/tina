@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     # Audio & Voice Configuration
     recordings_dir: str = "recordings"
     whisper_model: str = "tiny.en"  # tiny.en is ~75MB, fast and accurate for English
+    whisper_language: str = "en"  # Primary language is strictly English
     whisper_compute_type: str = "int8"
 
     # Ollama Local LLM Configuration

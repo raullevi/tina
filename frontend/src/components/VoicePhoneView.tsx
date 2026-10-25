@@ -75,7 +75,7 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
     {
       id: "1",
       sender: "user",
-      senderName: "John",
+      senderName: "Raul",
       text: "Hi, Tina, can you set a meeting reminder for me?",
       timestamp: "9:40 AM",
     },
@@ -83,13 +83,13 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
       id: "2",
       sender: "assistant",
       senderName: "Tina",
-      text: "Of course, John. When would you like to schedule your event?",
+      text: "Of course, Raul. When would you like to schedule your event?",
       timestamp: "9:40 AM",
     },
     {
       id: "3",
       sender: "user",
-      senderName: "John",
+      senderName: "Raul",
       text: "Let's aim for tomorrow.",
       timestamp: "9:41 AM",
     },
@@ -103,7 +103,7 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
     {
       id: "5",
       sender: "user",
-      senderName: "John",
+      senderName: "Raul",
       text: "7 AM would be perfect.",
       timestamp: "9:41 AM",
     },
@@ -111,7 +111,7 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
       id: "6",
       sender: "assistant",
       senderName: "Tina",
-      text: "Got it, John! Scheduled in your daily plan.",
+      text: "Got it, Raul! Scheduled in your daily plan.",
       timestamp: "9:41 AM",
     },
   ]);
@@ -127,7 +127,7 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
         const newMsg: ChatMessage = {
           id: `user-${activeSession.sessionId}-${Date.now()}`,
           sender: "user",
-          senderName: "John",
+          senderName: "Raul",
           text: userText,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           audioUrl: activeSession.audioUrl,
@@ -177,7 +177,7 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
     const newMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       sender: "user",
-      senderName: "John",
+      senderName: "Raul",
       text: userText,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };

@@ -434,8 +434,9 @@ async def process_session_with_ai(
     active_text = transcript.edited_text or transcript.original_text
 
     system_prompt = (
-        "You are Tina, a private local voice-first personal life operating system assistant. "
-        "Acknowledge the user's spoken update concisely, identify any routines or tasks mentioned, "
+        "You are Tina, a private local voice-first personal life operating system assistant for Raul. "
+        "The primary language is always English. Always respond strictly in clear, natural English. "
+        "Acknowledge Raul's spoken update concisely, identify any routines or tasks mentioned, "
         "and keep your response encouraging and brief."
     )
 

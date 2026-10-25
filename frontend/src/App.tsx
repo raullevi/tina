@@ -582,7 +582,7 @@ export function App() {
           {
             id: `user-${Date.now()}`,
             sender: "user",
-            senderName: "User",
+            senderName: "Raul",
             timestamp: "Just now",
             text: userPrompt,
           },
@@ -803,6 +803,7 @@ export function App() {
       window.speechSynthesis.cancel();
       const clean = text.replace(/[#*`]/g, "");
       const utterance = new SpeechSynthesisUtterance(clean);
+      utterance.lang = "en-US";
       utterance.pitch = 1.0;
       utterance.rate = 1.05;
       window.speechSynthesis.speak(utterance);
@@ -814,7 +815,7 @@ export function App() {
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       sender: "user",
-      senderName: "User",
+      senderName: "Raul",
       timestamp: "Just now",
       text: text,
     };
@@ -971,7 +972,7 @@ export function App() {
                     msgs.push({
                       id: `user-${s.session_id}`,
                       sender: "user",
-                      senderName: "User",
+                      senderName: "Raul",
                       timestamp: s.created_at ? new Date(s.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Saved",
                       text: s.edited_text || s.original_text || "",
                     });
@@ -1000,7 +1001,7 @@ export function App() {
               </svg>
             </div>
             <div>
-              <div className="user-name">User</div>
+              <div className="user-name">Raul</div>
               <div className="user-badge">
                 <span className={`badge-dot ${backendOnline && ollamaOnline ? "" : "offline"}`} style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", marginRight: 6, verticalAlign: "middle" }} />
                 Apple Silicon M4 • Llama 3.1 8B
