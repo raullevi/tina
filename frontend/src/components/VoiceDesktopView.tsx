@@ -69,13 +69,13 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
       id: "1",
       sender: "user",
       senderName: "John",
-      text: "Hi, Thena, can you set a meeting reminder for me?",
+      text: "Hi, Tina, can you set a meeting reminder for me?",
       timestamp: "9:40 AM",
     },
     {
       id: "2",
       sender: "assistant",
-      senderName: "Thena",
+      senderName: "Tina",
       text: "Of course, John. When would you like to schedule your event?",
       timestamp: "9:40 AM",
     },
@@ -89,7 +89,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
     {
       id: "4",
       sender: "assistant",
-      senderName: "Thena",
+      senderName: "Tina",
       text: "Do you have a preferred time?",
       timestamp: "9:41 AM",
     },
@@ -103,7 +103,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
     {
       id: "6",
       sender: "assistant",
-      senderName: "Thena",
+      senderName: "Tina",
       text: "Got it, John! Scheduled in your daily plan.",
       timestamp: "9:41 AM",
     },
@@ -135,7 +135,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
         const replyMsg: ChatMessage = {
           id: `ai-${activeSession.sessionId}-${Date.now()}`,
           sender: "assistant",
-          senderName: "Thena",
+          senderName: "Tina",
           text: reply,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
@@ -180,7 +180,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
         const aiMsg: ChatMessage = {
           id: `ai-${Date.now()}`,
           sender: "assistant",
-          senderName: "Thena",
+          senderName: "Tina",
           text: res,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
@@ -233,7 +233,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
         <div className="listening-indicator-row">
           <span className={`pc-glow-dot ${isRecording ? "active" : ""}`} />
           <span className="pc-listening-text">
-            {isRecording ? "Thena is Listening..." : isProcessing ? "Thena is Thinking..." : (statusText.toLowerCase().includes("listening") ? "Thena: Ready to Listen" : statusText)}
+            {isRecording ? "Tina is Listening..." : isProcessing ? "Tina is Thinking..." : (statusText.toLowerCase().includes("listening") ? "Tina: Ready to Listen" : statusText)}
           </span>
         </div>
 
@@ -243,7 +243,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
           onClick={toggleRecording}
           role="button"
           tabIndex={0}
-          title={isRecording ? "Click to stop recording" : "Click to speak with Thena"}
+          title={isRecording ? "Click to stop recording" : "Click to speak with Tina"}
         >
           <div className="pc-orb-specular" />
           <div className="pc-soundwave-bars">
@@ -331,7 +331,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
               </svg>
-              <span className="panel-title">Conversation with Thena</span>
+              <span className="panel-title">Conversation with Tina</span>
             </div>
             <span className="badge">{messages.length} messages</span>
           </div>
@@ -425,13 +425,13 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
                   onClick={handleSendToAI}
                   disabled={isProcessing}
                 >
-                  {isProcessing ? "Processing..." : "Confirm & Send to Thena"}
+                  {isProcessing ? "Processing..." : "Confirm & Send to Tina"}
                 </button>
               </div>
 
               {activeSession.aiReply && (
                 <div className="pc-ai-reply-card">
-                  <div className="ai-reply-label">Thena Response:</div>
+                  <div className="ai-reply-label">Tina Response:</div>
                   <div className="ai-reply-content">{activeSession.aiReply}</div>
                 </div>
               )}
@@ -458,7 +458,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
       <form onSubmit={handleSendInput} className="pc-bottom-input-bar">
         <input
           type="text"
-          placeholder="Continue conversation with Thena... (or click microphone)"
+          placeholder="Continue conversation with Tina... (or click microphone)"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           className="pc-input-field"
@@ -467,7 +467,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
           type="button"
           className={`pc-mic-action-btn ${isRecording ? "recording" : ""}`}
           onClick={toggleRecording}
-          title={isRecording ? "Stop Recording" : "Speak to Thena"}
+          title={isRecording ? "Stop Recording" : "Speak to Tina"}
         >
           <svg viewBox="0 0 24 24" fill="currentColor" className="mic-svg">
             <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />

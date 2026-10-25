@@ -523,7 +523,7 @@ export function App() {
         editedText: data.original_text,
         audioUrl: `${BACKEND_BASE}${data.audio_url}`,
       });
-      setStatusText("Transcription complete! Review or send to Thena.");
+      setStatusText("Transcription complete! Review or send to Tina.");
       await loadSessions();
     } catch (err: unknown) {
       console.error("Transcription error:", err);
@@ -558,7 +558,7 @@ export function App() {
   const handleSendToAI = async () => {
     if (!activeSession) return;
     setIsProcessing(true);
-    setStatusText("Thena is understanding and extracting memory...");
+    setStatusText("Tina is understanding and extracting memory...");
     try {
       if (activeSession.editedText !== activeSession.originalText) {
         await handleSaveTranscript();
@@ -571,7 +571,7 @@ export function App() {
 
       if (response.ok) {
         const result = await response.json();
-        const replyText = result.reply || "Recorded and processed by Thena.";
+        const replyText = result.reply || "Recorded and processed by Tina.";
         setActiveSession((prev) => (prev ? { ...prev, aiReply: replyText } : null));
         setStatusText("Response received & memory stored!");
 
@@ -589,7 +589,7 @@ export function App() {
           {
             id: `asst-${Date.now()}`,
             sender: "assistant",
-            senderName: "Thena",
+            senderName: "Tina",
             timestamp: "Just now",
             text: replyText,
           },
@@ -598,8 +598,8 @@ export function App() {
         await Promise.all([loadMemoryData(), loadAnalytics(), loadMyDay()]);
       }
     } catch (err) {
-      console.error("Thena processing error:", err);
-      setStatusText("Failed to process with Thena.");
+      console.error("Tina processing error:", err);
+      setStatusText("Failed to process with Tina.");
     } finally {
       setIsProcessing(false);
     }
@@ -762,7 +762,7 @@ export function App() {
       });
       if (res.ok) {
         const data = await res.json();
-        const reply = data.answer || "Recorded and processed by Thena.";
+        const reply = data.answer || "Recorded and processed by Tina.";
         setActiveSession((prev) => ({
           sessionId: prev ? prev.sessionId : Date.now(),
           originalText: text,
@@ -772,10 +772,10 @@ export function App() {
         }));
         return reply;
       }
-      return "Recorded and processed by Thena.";
+      return "Recorded and processed by Tina.";
     } catch (err) {
       console.error("Direct prompt error:", err);
-      return "Recorded and processed by Thena.";
+      return "Recorded and processed by Tina.";
     } finally {
       setIsProcessing(false);
     }
@@ -828,11 +828,11 @@ export function App() {
       });
       if (res.ok) {
         const data = await res.json();
-        const reply = data.answer || "Recorded and processed by Thena.";
+        const reply = data.answer || "Recorded and processed by Tina.";
         const assistantMsg: ChatMessage = {
           id: `asst-${Date.now()}`,
           sender: "assistant",
-          senderName: "Thena",
+          senderName: "Tina",
           timestamp: "Just now",
           text: reply,
         };
@@ -841,7 +841,7 @@ export function App() {
         const fallbackMsg: ChatMessage = {
           id: `asst-${Date.now()}`,
           sender: "assistant",
-          senderName: "Thena",
+          senderName: "Tina",
           timestamp: "Just now",
           text: "I processed your request and updated your local life OS context.",
         };
@@ -882,7 +882,7 @@ export function App() {
       <aside className={`chatgpt-sidebar ${isSidebarOpen ? "" : "collapsed"}`}>
         <div className="sidebar-top-bar">
           <div className="sidebar-brand-title">
-            <span>Thena</span>
+            <span>Tina</span>
           </div>
           <div className="sidebar-top-actions">
             <button
@@ -1025,7 +1025,7 @@ export function App() {
               </button>
             )}
             <div className="top-bar-title">
-              <span>Thena</span>
+              <span>Tina</span>
             </div>
           </div>
         </header>
@@ -1083,7 +1083,7 @@ export function App() {
                       <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
                     </svg>
                   </div>
-                  <h1 className="welcome-title">How can Thena help you today?</h1>
+                  <h1 className="welcome-title">How can Tina help you today?</h1>
                   <p className="welcome-sub">
                     Click the orb to speak, or type a request in the message capsule below.
                   </p>
@@ -1702,7 +1702,7 @@ export function App() {
             <input
               type="text"
               className="capsule-text-input"
-              placeholder="Message Thena..."
+              placeholder="Message Tina..."
               value={bottomInputText}
               onChange={(e) => setBottomInputText(e.target.value)}
               disabled={isProcessing}
@@ -1712,7 +1712,7 @@ export function App() {
                 type="button"
                 className={`capsule-mic-btn ${isRecording ? "recording" : ""}`}
                 onClick={toggleRecording}
-                title={isRecording ? "Stop Recording" : "Speak to Thena (Faster-Whisper)"}
+                title={isRecording ? "Stop Recording" : "Speak to Tina (Faster-Whisper)"}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
@@ -1731,7 +1731,7 @@ export function App() {
           </form>
 
           <div className="floating-disclaimer-text">
-            Thena can make mistakes. Check important info. Running locally on Apple Silicon M4 • llama3.1:8b.
+            Tina can make mistakes. Check important info. Running locally on Apple Silicon M4 • llama3.1:8b.
           </div>
         </footer>
 

@@ -70,19 +70,19 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
     status: string;
   } | null>(null);
 
-  // Chat messages thread matching Screen 3 with Thena
+  // Chat messages thread matching Screen 3 with Tina
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
       sender: "user",
       senderName: "John",
-      text: "Hi, Thena, can you set a meeting reminder for me?",
+      text: "Hi, Tina, can you set a meeting reminder for me?",
       timestamp: "9:40 AM",
     },
     {
       id: "2",
       sender: "assistant",
-      senderName: "Thena",
+      senderName: "Tina",
       text: "Of course, John. When would you like to schedule your event?",
       timestamp: "9:40 AM",
     },
@@ -96,7 +96,7 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
     {
       id: "4",
       sender: "assistant",
-      senderName: "Thena",
+      senderName: "Tina",
       text: "Do you have a preferred time?",
       timestamp: "9:41 AM",
     },
@@ -110,7 +110,7 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
     {
       id: "6",
       sender: "assistant",
-      senderName: "Thena",
+      senderName: "Tina",
       text: "Got it, John! Scheduled in your daily plan.",
       timestamp: "9:41 AM",
     },
@@ -143,7 +143,7 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
         const replyMsg: ChatMessage = {
           id: `ai-${activeSession.sessionId}-${Date.now()}`,
           sender: "assistant",
-          senderName: "Thena",
+          senderName: "Tina",
           text: reply,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
@@ -189,7 +189,7 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
         const aiMsg: ChatMessage = {
           id: `ai-${Date.now()}`,
           sender: "assistant",
-          senderName: "Thena",
+          senderName: "Tina",
           text: res,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
@@ -207,7 +207,7 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
         const aiMsg: ChatMessage = {
           id: `ai-${Date.now()}`,
           sender: "assistant",
-          senderName: "Thena",
+          senderName: "Tina",
           text: `Got it! Processed "${userText}" into your Life OS.`,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
@@ -286,7 +286,7 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
         {showNavDrawer && (
           <div className="phone-nav-drawer">
             <div className="drawer-header">
-              <span className="drawer-title">THENA OS Hub</span>
+              <span className="drawer-title">TINA OS Hub</span>
               <button className="drawer-close" onClick={() => setShowNavDrawer(false)}>✕</button>
             </div>
             <div className="drawer-links">
@@ -601,13 +601,13 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
                     onClick={handleSendToAI}
                     disabled={isProcessing}
                   >
-                    {isProcessing ? "Processing..." : "Send to Thena"}
+                    {isProcessing ? "Processing..." : "Send to Tina"}
                   </button>
                 </div>
 
                 {activeSession.aiReply && (
                   <div className="transcript-reply-box">
-                    <div className="transcript-reply-title">Thena Reply:</div>
+                    <div className="transcript-reply-title">Tina Reply:</div>
                     <div className="transcript-reply-content">{activeSession.aiReply}</div>
                   </div>
                 )}

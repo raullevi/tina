@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Application settings for SKIM backend."""
 
-    app_name: str = "Thena Life OS"
+    app_name: str = "Tina Life OS"
     app_version: str = "0.2.0"
     debug: bool = False
 
