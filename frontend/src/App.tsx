@@ -937,16 +937,7 @@ export function App() {
           ))}
         </div>
 
-        <div className="sidebar-section-header">
-          <span>Pinned</span>
-          <span>›</span>
-        </div>
-        <div className="sidebar-section-header">
-          <span>Projects</span>
-          <span>›</span>
-        </div>
-
-        <div className="sidebar-section-header" style={{ marginTop: "10px" }}>
+        <div className="sidebar-section-header" style={{ marginTop: "12px" }}>
           <span>Recents</span>
         </div>
         <div className="sidebar-recents-list">
