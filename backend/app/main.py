@@ -208,7 +208,7 @@ class MemoryExtractResponse(BaseModel):
 @app.get("/", tags=["Root"])
 async def root() -> Dict[str, str]:
     return {
-        "message": "Welcome to SKIM - Personal Life OS",
+        "message": "Welcome to Thena - Personal Life OS",
         "docs_url": "/docs",
         "health_check": "/health",
     }
@@ -378,7 +378,7 @@ async def process_session_with_ai(
     active_text = transcript.edited_text or transcript.original_text
 
     system_prompt = (
-        "You are SKIM, a local voice-first personal life operating system assistant. "
+        "You are Thena, a private local voice-first personal life operating system assistant. "
         "Acknowledge the user's spoken update concisely, identify any routines or tasks mentioned, "
         "and keep your response encouraging and brief."
     )
@@ -781,7 +781,7 @@ async def process_voice_stub(
     db.refresh(voice_session)
 
     system_instruction = (
-        "You are SKIM, a local voice-first personal life operating system assistant. "
+        "You are Thena, a private local voice-first personal life operating system assistant. "
         "Acknowledge the user's update concisely and supportively."
     )
     try:

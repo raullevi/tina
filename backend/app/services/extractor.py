@@ -34,7 +34,7 @@ class ExtractionResult(BaseModel):
     facts: List[ExtractedFact] = Field(default_factory=list)
 
 
-EXTRACTION_SYSTEM_PROMPT = """You are SKIM's Personal Memory Extraction Engine.
+EXTRACTION_SYSTEM_PROMPT = """You are Thena's Personal Memory Extraction Engine.
 Analyze the user's spoken transcript and extract structured personal records.
 Output STRICT, VALID JSON ONLY. Do not include markdown codeblocks or conversational text.
 

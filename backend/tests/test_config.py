@@ -9,7 +9,7 @@ def test_default_settings():
     assert settings.ollama_model == "llama3.1:8b"
     assert settings.ollama_timeout_seconds == 60.0
     assert settings.database_url == "sqlite:///./skim.db"
-    assert settings.app_name == "SKIM Backend"
+    assert settings.app_name == "Thena Life OS"
 
 
 def test_settings_environment_override(monkeypatch):

@@ -398,7 +398,7 @@ export function App() {
   const handleSendToAI = async () => {
     if (!activeSession) return;
     setIsProcessing(true);
-    setStatusText("SKIM is understanding and extracting memory...");
+    setStatusText("Thena is understanding and extracting memory...");
     try {
       if (activeSession.editedText !== activeSession.originalText) {
         await handleSaveTranscript();
@@ -570,7 +570,7 @@ export function App() {
 
 
   // Direct text prompt handler for phone interface
-  const handleSendDirectPrompt = async (text: string) => {
+  const handleSendDirectPrompt = async (text: string): Promise<string> => {
     try {
       setIsProcessing(true);
       const res = await fetch(`${BACKEND_BASE}/api/research/query`, {
@@ -580,16 +580,20 @@ export function App() {
       });
       if (res.ok) {
         const data = await res.json();
+        const reply = data.answer || "Recorded and processed by Thena.";
         setActiveSession((prev) => ({
           sessionId: prev ? prev.sessionId : Date.now(),
           originalText: text,
           editedText: text,
           audioUrl: prev ? prev.audioUrl : "",
-          aiReply: data.answer || "Recorded to your personal Life OS.",
+          aiReply: reply,
         }));
+        return reply;
       }
+      return "Recorded and processed by Thena.";
     } catch (err) {
       console.error("Direct prompt error:", err);
+      return "Recorded and processed by Thena.";
     } finally {
       setIsProcessing(false);
     }
@@ -600,9 +604,9 @@ export function App() {
       {/* Header & Navigation */}
       <header className="app-header">
         <div className="brand">
-          <div className="brand-logo">S</div>
+          <div className="brand-logo">T</div>
           <div>
-            <div className="brand-title">SKIM</div>
+            <div className="brand-title">THENA</div>
             <div className="brand-subtitle">Voice-First Personal Life OS</div>
           </div>
         </div>
@@ -668,7 +672,7 @@ export function App() {
           </div>
           <div className="badge">
             <span className={`badge-dot ${ollamaOnline ? "" : "offline"}`} />
-            <span>Ollama</span>
+            <span>Llama 3.1 8B</span>
           </div>
         </div>
       </header>
@@ -687,6 +691,14 @@ export function App() {
           isProcessing={isProcessing}
           setActiveSession={setActiveSession}
           onSendMessage={handleSendDirectPrompt}
+          onNavigateTab={(tab) => {
+            setActiveTab(tab as any);
+            if (tab === "myday") loadMyDay();
+            if (tab === "lifetree") loadLifeTree();
+            if (tab === "research") loadDocuments();
+            if (tab === "trackers") loadAnalytics();
+            if (tab === "memory") loadMemoryData();
+          }}
         />
       )}
 

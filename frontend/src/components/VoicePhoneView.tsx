@@ -34,7 +34,8 @@ export interface VoicePhoneViewProps {
   isSaving: boolean;
   isProcessing: boolean;
   setActiveSession: (session: any) => void;
-  onSendMessage?: (text: string) => void;
+  onSendMessage?: (text: string) => Promise<string | void>;
+  onNavigateTab?: (tab: string) => void;
 }
 
 export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
@@ -49,6 +50,7 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
   isProcessing,
   setActiveSession,
   onSendMessage,
+  onNavigateTab,
 }) => {
   // Navigation tab inside the phone: 'main' | 'history' | 'transcript'
   const [phoneTab, setPhoneTab] = useState<"main" | "history" | "transcript">("main");
@@ -57,6 +59,7 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
   const [selectedLanguage, setSelectedLanguage] = useState("Auto-Detect");
   const [showLangMenu, setShowLangMenu] = useState(false);
   const [showExploreCard, setShowExploreCard] = useState(true);
+  const [showNavDrawer, setShowNavDrawer] = useState(false);
 
   // Notification Toast (Screen 2: Calendar / Action Scheduled banner)
   const [toast, setToast] = useState<{
@@ -67,20 +70,20 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
     status: string;
   } | null>(null);
 
-  // Chat messages thread matching Screen 3
+  // Chat messages thread matching Screen 3 with Thena
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
       sender: "user",
       senderName: "John",
-      text: "Hi, CoreAssist, can you set a meeting reminder for me?",
+      text: "Hi, Thena, can you set a meeting reminder for me?",
       timestamp: "9:40 AM",
     },
     {
       id: "2",
       sender: "assistant",
-      senderName: "CoreAssist",
-      text: "Of course, John. When would you like to schedule your exercise?",
+      senderName: "Thena",
+      text: "Of course, John. When would you like to schedule your event?",
       timestamp: "9:40 AM",
     },
     {
@@ -93,7 +96,7 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
     {
       id: "4",
       sender: "assistant",
-      senderName: "CoreAssist",
+      senderName: "Thena",
       text: "Do you have a preferred time?",
       timestamp: "9:41 AM",
     },
@@ -107,8 +110,8 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
     {
       id: "6",
       sender: "assistant",
-      senderName: "CoreAssist",
-      text: "Got it, John!",
+      senderName: "Thena",
+      text: "Got it, John! Scheduled in your daily plan.",
       timestamp: "9:41 AM",
     },
   ]);
@@ -140,7 +143,7 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
         const replyMsg: ChatMessage = {
           id: `ai-${activeSession.sessionId}-${Date.now()}`,
           sender: "assistant",
-          senderName: "CoreAssist",
+          senderName: "Thena",
           text: reply,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
@@ -164,7 +167,7 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
     return txt;
   };
 
-  const handleSendInput = (e: React.FormEvent) => {
+  const handleSendInput = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
 
@@ -181,14 +184,31 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
     setMessages((prev) => [...prev, newMsg]);
 
     if (onSendMessage) {
-      onSendMessage(userText);
+      const res = await onSendMessage(userText);
+      if (res) {
+        const aiMsg: ChatMessage = {
+          id: `ai-${Date.now()}`,
+          sender: "assistant",
+          senderName: "Thena",
+          text: res,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        };
+        setMessages((prev) => [...prev, aiMsg]);
+        setToast({
+          icon: "📅",
+          title: "Calendar",
+          date: `FRIDAY, ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }).toUpperCase()}`,
+          detail: userText,
+          status: "Scheduled",
+        });
+      }
     } else {
       setTimeout(() => {
         const aiMsg: ChatMessage = {
           id: `ai-${Date.now()}`,
           sender: "assistant",
-          senderName: "CoreAssist",
-          text: `Got it! Logged "${userText}" to your Life OS.`,
+          senderName: "Thena",
+          text: `Got it! Processed "${userText}" into your Life OS.`,
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
         setMessages((prev) => [...prev, aiMsg]);
@@ -262,6 +282,37 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
           </div>
         )}
 
+        {/* Quick Drawer / Navigation inside the phone */}
+        {showNavDrawer && (
+          <div className="phone-nav-drawer">
+            <div className="drawer-header">
+              <span className="drawer-title">THENA OS Hub</span>
+              <button className="drawer-close" onClick={() => setShowNavDrawer(false)}>✕</button>
+            </div>
+            <div className="drawer-links">
+              {[
+                { id: "voice", label: "🎙️ Voice Assistant" },
+                { id: "myday", label: "⚡ My Day & Routines" },
+                { id: "lifetree", label: "🌳 Life Tree Clusters" },
+                { id: "research", label: "🔍 Research Assistant" },
+                { id: "trackers", label: "📊 Life Trackers & Charts" },
+                { id: "memory", label: "🧠 Memory Vault" },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  className="drawer-item"
+                  onClick={() => {
+                    setShowNavDrawer(false);
+                    if (onNavigateTab) onNavigateTab(item.id);
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* View Mode 1: Main Voice Orb & Quick Actions (Screen 1) */}
         {phoneTab === "main" && (
           <div className="phone-screen-content">
@@ -269,8 +320,8 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
             <div className="phone-nav-bar">
               <button
                 className="icon-circle-btn"
-                onClick={() => setPhoneTab("history")}
-                title="View History"
+                onClick={() => setShowNavDrawer(true)}
+                title="Open Navigation"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="3" y1="12" x2="21" y2="12" />
@@ -550,13 +601,13 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
                     onClick={handleSendToAI}
                     disabled={isProcessing}
                   >
-                    {isProcessing ? "Processing..." : "Send to SKIM"}
+                    {isProcessing ? "Processing..." : "Send to Thena"}
                   </button>
                 </div>
 
                 {activeSession.aiReply && (
                   <div className="transcript-reply-box">
-                    <div className="transcript-reply-title">SKIM AI Reply:</div>
+                    <div className="transcript-reply-title">Thena Reply:</div>
                     <div className="transcript-reply-content">{activeSession.aiReply}</div>
                   </div>
                 )}
