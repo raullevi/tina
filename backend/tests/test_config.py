@@ -6,7 +6,7 @@ def test_default_settings():
     """Verify default settings for Phase 1."""
     settings = Settings()
     assert settings.ollama_base_url == "http://localhost:11434"
-    assert settings.ollama_model == "llama3.2:3b"
+    assert settings.ollama_model == "llama3.1:8b"
     assert settings.ollama_timeout_seconds == 60.0
     assert settings.database_url == "sqlite:///./skim.db"
     assert settings.app_name == "SKIM Backend"
