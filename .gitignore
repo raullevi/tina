@@ -1,0 +1,33 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Python cache & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment files
+.env
+*.env.local
+
+# Database & SQLite files
+*.sqlite
+*.sqlite3
+*.db
+
+# Audio recordings & user data (SKIM privacy rule)
+recordings/
+transcripts_raw/
+data/
+*.wav
+*.mp3
+*.m4a
+
+# macOS system files
+.DS_Store
