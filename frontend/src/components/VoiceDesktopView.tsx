@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./VoiceDesktopView.css";
+import { BACKEND_BASE } from "../config";
 
 export interface ChatMessage {
   id: string;
@@ -205,7 +206,7 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
       sessionId: s.session_id,
       originalText: s.original_text || "",
       editedText: s.edited_text || s.original_text || "",
-      audioUrl: s.audio_url ? `http://127.0.0.1:8000${s.audio_url}` : undefined,
+      audioUrl: s.audio_url ? `${BACKEND_BASE}${s.audio_url}` : undefined,
     });
   };
 

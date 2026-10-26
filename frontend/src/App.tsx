@@ -131,8 +131,7 @@ interface WeeklyReport {
   weight_analysis: WeightAnalytics;
   fitness_analysis: GymAnalytics;
 }
-
-const BACKEND_BASE = "http://localhost:8000";
+import { BACKEND_BASE } from "./config";
 
 
 interface ChatMessage {

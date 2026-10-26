@@ -1,0 +1,9 @@
+{
+  "name": "tina",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
