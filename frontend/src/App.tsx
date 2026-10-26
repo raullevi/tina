@@ -289,6 +289,9 @@ export function App() {
   >("voice");
   const switchTab = (tabId: string) => {
     setActiveTab(tabId as any);
+    if (typeof window !== "undefined" && window.innerWidth <= 768) {
+      setIsSidebarOpen(false);
+    }
     if (tabId === "myday") loadMyDay();
     if (tabId === "lifetree") loadLifeTree();
     if (tabId === "research") loadDocuments();
@@ -784,7 +787,9 @@ export function App() {
   };
 
   // ChatGPT Desktop states
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth > 768 : true
+  );
   const [showFullOrbView, setShowFullOrbView] = useState(false);
   const [bottomInputText, setBottomInputText] = useState("");
   const [recentActiveId, setRecentActiveId] = useState("");
@@ -1011,6 +1016,13 @@ export function App() {
           </div>
         </div>
       </aside>
+      {isSidebarOpen && (
+        <div
+          className="sidebar-mobile-backdrop"
+          onClick={() => setIsSidebarOpen(false)}
+          aria-label="Close sidebar backdrop"
+        />
+      )}
 
       {/* Main Content Area */}
       <main className="chatgpt-main-content">
@@ -1770,6 +1782,20 @@ export function App() {
             Tina can make mistakes. Check important info. Running locally on Apple Silicon M4 • llama3.1:8b.
           </div>
         </footer>
+
+        {/* Mobile Bottom Navigation Bar (iOS / Native Mobile Style) */}
+        <nav className="mobile-bottom-nav">
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              className={`mobile-nav-btn ${activeTab === item.id ? "active" : ""}`}
+              onClick={() => switchTab(item.id)}
+            >
+              <span className="mobile-nav-icon">{item.icon}</span>
+              <span className="mobile-nav-label">{item.label}</span>
+            </button>
+          ))}
+        </nav>
 
         {copyFeedback && <div className="copy-toast">{copyFeedback}</div>}
 

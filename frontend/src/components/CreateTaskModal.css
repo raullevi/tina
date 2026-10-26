@@ -418,3 +418,31 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+@media (max-width: 768px) {
+  .task-modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .task-modal-card {
+    border-radius: 20px 20px 0 0;
+    max-height: 88dvh;
+    border-bottom: none;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.85);
+  }
+  .task-modal-header {
+    padding: 18px 18px 12px;
+  }
+  .task-modal-body {
+    padding: 14px 18px;
+  }
+  .task-type-selector {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .form-row.two-col {
+    grid-template-columns: 1fr !important;
+  }
+  .task-modal-footer {
+    padding: 14px 18px max(14px, env(safe-area-inset-bottom));
+  }
+}
