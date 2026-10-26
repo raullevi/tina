@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
-# Tina Life OS - One-command local runner with hot reload
+# Tina Life OS - 100% Local Launcher with Phone Access
 set -e
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$DIR"
 
-echo "🤖 Warming up Ollama model (llama3.1:8b)..."
+LOCAL_IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "127.0.0.1")
+
+echo "🤖 1/3 Pre-warming Ollama (llama3.1:8b) in VRAM..."
 curl -s http://localhost:11434/api/generate -d '{"model": "llama3.1:8b", "keep_alive": "60m"}' > /dev/null 2>&1 || true
 
-echo "🚀 Starting Backend (FastAPI with auto-reload on :8000)..."
-.venv/bin/uvicorn app.main:app --app-dir backend --reload --port 8000 &
+echo "🧠 2/3 Starting FastAPI Backend (with auto-reload on :8000)..."
+.venv/bin/uvicorn app.main:app --app-dir backend --host 0.0.0.0 --port 8000 --reload &
 BACKEND_PID=$!
 
-echo "⚡ Starting Frontend (Vite with hot-reload on :5173)..."
-npm --prefix frontend run dev &
+echo "⚡ 3/3 Starting React/Vite Frontend (on :5173)..."
+npm --prefix frontend run dev -- --host 0.0.0.0 --port 5173 &
 FRONTEND_PID=$!
 
 cleanup() {
@@ -27,10 +29,16 @@ cleanup() {
 trap cleanup SIGINT SIGTERM
 
 echo ""
-echo "✨ Tina Life OS is live!"
-echo "   💻 Frontend: http://localhost:5173"
-echo "   🧠 Backend:  http://localhost:8000"
-echo "   (Press Ctrl+C to stop both)"
+echo "=========================================================="
+echo "✨ Tina Life OS is Running 100% Locally on your Mac!"
 echo ""
+echo "💻 Mac Browser:    http://localhost:5173"
+echo "📱 iPhone/Network: http://${LOCAL_IP}:5173"
+echo "=========================================================="
+echo "   (Press Ctrl+C in this terminal to stop)"
+echo ""
+
+# Automatically open in default browser
+(sleep 1.5 && open "http://localhost:5173") &
 
 wait
