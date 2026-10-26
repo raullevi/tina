@@ -470,10 +470,46 @@ export function App() {
   // Voice recording handlers
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const errorMsg = window.isSecureContext === false
+          ? "Microphone access requires HTTPS on mobile devices. Please open the URL with https:// instead of http://."
+          : "Microphone is not supported in this browser.";
+        alert(errorMsg);
+        setStatusText(errorMsg);
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
       audioChunksRef.current = [];
 
-      const mediaRecorder = new MediaRecorder(stream);
+      // Determine best supported mimeType for iOS Safari / Android / Desktop
+      let chosenMime = "";
+      let chosenExt = "webm";
+      if (typeof MediaRecorder !== "undefined") {
+        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+          chosenMime = "audio/webm;codecs=opus";
+          chosenExt = "webm";
+        } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+          chosenMime = "audio/webm";
+          chosenExt = "webm";
+        } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+          chosenMime = "audio/mp4";
+          chosenExt = "mp4";
+        } else if (MediaRecorder.isTypeSupported("audio/aac")) {
+          chosenMime = "audio/aac";
+          chosenExt = "aac";
+        }
+      }
+
+      const mediaRecorder = chosenMime
+        ? new MediaRecorder(stream, { mimeType: chosenMime })
+        : new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
@@ -481,17 +517,29 @@ export function App() {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: chosenMime || "audio/webm",
+        });
         stream.getTracks().forEach((track) => track.stop());
-        await uploadAudio(audioBlob);
+        await uploadAudio(audioBlob, chosenExt);
       };
 
       mediaRecorder.start();
       setIsRecording(true);
-      setStatusText("Listening... (Click again to stop)");
-    } catch (err) {
+      setStatusText("Listening... (Tap again to stop)");
+    } catch (err: any) {
       console.error("Microphone error:", err);
-      setStatusText("Microphone access denied or unavailable");
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        alert(
+          "Microphone permission was denied. Tap the 'AA' or lock icon in your browser address bar -> Website Settings -> set Microphone to 'Allow'."
+        );
+        setStatusText("Microphone access denied in browser settings");
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        alert("No microphone found on this device.");
+        setStatusText("No microphone found");
+      } else {
+        setStatusText(`Microphone error: ${err.message || "Unknown error"}`);
+      }
     }
   };
 
@@ -508,10 +556,10 @@ export function App() {
     else startRecording();
   };
 
-  const uploadAudio = async (blob: Blob) => {
+  const uploadAudio = async (blob: Blob, ext: string = "webm") => {
     try {
       const formData = new FormData();
-      formData.append("file", blob, "recording.webm");
+      formData.append("file", blob, `recording.${ext}`);
 
       const response = await fetch(`${BACKEND_BASE}/api/voice/audio`, {
         method: "POST",

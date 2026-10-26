@@ -30,15 +30,17 @@ trap cleanup SIGINT SIGTERM
 
 echo ""
 echo "=========================================================="
-echo "✨ Tina Life OS is Running 100% Locally on your Mac!"
+echo "✨ Tina Life OS is Running 100% Locally on your Mac (HTTPS)!"
 echo ""
-echo "💻 Mac Browser:    http://localhost:5173"
-echo "📱 iPhone/Network: http://${LOCAL_IP}:5173"
+echo "💻 Mac Browser:    https://localhost:5173"
+echo "📱 iPhone/Network: https://${LOCAL_IP}:5173"
+echo ""
+echo "🎙️  Note for iPhone: Use https:// so iOS prompts for microphone access!"
 echo "=========================================================="
 echo "   (Press Ctrl+C in this terminal to stop)"
 echo ""
 
 # Automatically open in default browser
-(sleep 1.5 && open "http://localhost:5173") &
+(sleep 1.5 && open "https://localhost:5173") &
 
 wait
