@@ -8,7 +8,7 @@ echo "🔍 1/3 Verifying frontend build before pushing..."
 npm --prefix frontend run build > /dev/null
 
 echo "📦 2/3 Staging changes (excluding database, models, and secrets)..."
-git add backend/ frontend/ vercel.json README.md scripts/ *.sh 2>/dev/null || git add .
+git add backend/ frontend/ vercel.json package*.json README.md scripts/ *.sh 2>/dev/null || git add .
 
 # Check if there is anything to commit
 if git diff --staged --quiet; then

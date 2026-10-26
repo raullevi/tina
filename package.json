@@ -1,0 +1,11 @@
+{
+  "name": "tina-life-os",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "start": "./start.sh",
+    "dev": "./start.sh",
+    "sync": "./sync.sh",
+    "build": "cd frontend && npm install && npm run build"
+  }
+}
