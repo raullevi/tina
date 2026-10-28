@@ -12,6 +12,10 @@ interface CanvasViewProps {
   onAddBranch: () => void;
   onDeleteStage: (stageId: string) => void;
   saveStatus: "saved" | "saving" | "unsaved";
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
 }
 
 const CARD_WIDTH = 220;
@@ -28,6 +32,10 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
   onAddBranch,
   onDeleteStage,
   saveStatus,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -61,6 +69,24 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         return;
       }
 
+      // Undo: Cmd+Z (Mac) or Ctrl+Z (Windows/Linux)
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          onRedo?.();
+        } else {
+          onUndo?.();
+        }
+        return;
+      }
+
+      // Redo: Ctrl+Y (Windows/Linux)
+      if (e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        onRedo?.();
+        return;
+      }
+
       if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedConnectionId) {
           e.preventDefault();
@@ -78,7 +104,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedStageId, selectedConnectionId, connections, onDeleteStage, onSelectStage, onUpdateConnections]);
+  }, [selectedStageId, selectedConnectionId, connections, onDeleteStage, onSelectStage, onUpdateConnections, onUndo, onRedo]);
 
   // Fit workflow to viewport
   const handleFitWorkflow = () => {
@@ -246,6 +272,35 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
           </button>
           <button className="rb-toolbar-btn" onClick={handleFitWorkflow} title="Fit workflow in view">
             <span>Fit workflow</span>
+          </button>
+        </div>
+
+        <div className="rb-toolbar-separator" />
+
+        <div className="rb-toolbar-group">
+          <button
+            className="rb-toolbar-icon-btn"
+            onClick={onUndo}
+            disabled={!canUndo}
+            title="Undo (⌘Z / Ctrl+Z)"
+            style={{ opacity: canUndo ? 1 : 0.35, cursor: canUndo ? "pointer" : "not-allowed" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 7v6h6" />
+              <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+            </svg>
+          </button>
+          <button
+            className="rb-toolbar-icon-btn"
+            onClick={onRedo}
+            disabled={!canRedo}
+            title="Redo (⌘⇧Z / Ctrl+Y)"
+            style={{ opacity: canRedo ? 1 : 0.35, cursor: canRedo ? "pointer" : "not-allowed" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 7v6h-6" />
+              <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" />
+            </svg>
           </button>
         </div>
 

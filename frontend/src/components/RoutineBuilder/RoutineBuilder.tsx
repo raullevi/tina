@@ -24,6 +24,23 @@ export const RoutineBuilder: React.FC<RoutineBuilderProps> = ({ backendBaseUrl }
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Undo / Redo History State & Stack
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const [undoToast, setUndoToast] = useState<{ message: string; showRedo?: boolean } | null>(null);
+  const undoToastTimerRef = useRef<any>(null);
+
+  const undoStackRef = useRef<{ stages: RoutineStage[]; connections: RoutineConnection[]; actionName: string }[]>([]);
+  const redoStackRef = useRef<{ stages: RoutineStage[]; connections: RoutineConnection[]; actionName: string }[]>([]);
+
+  const showUndoToast = (message: string, showRedo: boolean = false) => {
+    if (undoToastTimerRef.current) clearTimeout(undoToastTimerRef.current);
+    setUndoToast({ message, showRedo });
+    undoToastTimerRef.current = setTimeout(() => {
+      setUndoToast(null);
+    }, 6000);
+  };
+
   // Auto-save debounce timer, active abort controller, and request version token
   const autoSaveTimerRef = useRef<any>(null);
   const activeAbortControllerRef = useRef<AbortController | null>(null);
@@ -89,23 +106,37 @@ export const RoutineBuilder: React.FC<RoutineBuilderProps> = ({ backendBaseUrl }
     }
   }, [currentRoutine]);
 
-  // Unified atomic workflow update & save
+  // Unified atomic workflow update & save with Undo/Redo history tracking
   const updateWorkflow = (
     newStages?: RoutineStage[],
     newConnections?: RoutineConnection[],
-    immediate: boolean = false
+    immediate: boolean = false,
+    recordHistory: boolean = true,
+    actionName: string = "Edit workflow"
   ) => {
     if (!currentRoutine) return;
     const routineId = currentRoutine.id;
 
-    const stagesToSave =
-      newStages !== undefined
-        ? newStages
-        : currentRoutineRef.current?.stages ?? currentRoutine.stages ?? [];
-    const connsToSave =
-      newConnections !== undefined
-        ? newConnections
-        : currentRoutineRef.current?.connections ?? currentRoutine.connections ?? [];
+    const currentStages = currentRoutineRef.current?.stages ?? currentRoutine.stages ?? [];
+    const currentConnections = currentRoutineRef.current?.connections ?? currentRoutine.connections ?? [];
+
+    if (recordHistory) {
+      // Record snapshot for undo before applying modifications
+      undoStackRef.current.push({
+        stages: JSON.parse(JSON.stringify(currentStages)),
+        connections: JSON.parse(JSON.stringify(currentConnections)),
+        actionName,
+      });
+      if (undoStackRef.current.length > 50) {
+        undoStackRef.current.shift();
+      }
+      redoStackRef.current = [];
+      setCanUndo(true);
+      setCanRedo(false);
+    }
+
+    const stagesToSave = newStages !== undefined ? newStages : currentStages;
+    const connsToSave = newConnections !== undefined ? newConnections : currentConnections;
 
     // Immediately keep ref updated
     currentRoutineRef.current = {
@@ -202,13 +233,53 @@ export const RoutineBuilder: React.FC<RoutineBuilderProps> = ({ backendBaseUrl }
     }
   };
 
+  // Undo handler
+  const handleUndo = () => {
+    if (!currentRoutine || undoStackRef.current.length === 0) return;
+    const prev = undoStackRef.current.pop()!;
+    const currentStages = currentRoutineRef.current?.stages ?? currentRoutine.stages ?? [];
+    const currentConnections = currentRoutineRef.current?.connections ?? currentRoutine.connections ?? [];
+
+    redoStackRef.current.push({
+      stages: JSON.parse(JSON.stringify(currentStages)),
+      connections: JSON.parse(JSON.stringify(currentConnections)),
+      actionName: prev.actionName,
+    });
+
+    setCanUndo(undoStackRef.current.length > 0);
+    setCanRedo(true);
+
+    showUndoToast(`↩ Undone: ${prev.actionName}`, true);
+    updateWorkflow(prev.stages, prev.connections, true, false, `Undo ${prev.actionName}`);
+  };
+
+  // Redo handler
+  const handleRedo = () => {
+    if (!currentRoutine || redoStackRef.current.length === 0) return;
+    const next = redoStackRef.current.pop()!;
+    const currentStages = currentRoutineRef.current?.stages ?? currentRoutine.stages ?? [];
+    const currentConnections = currentRoutineRef.current?.connections ?? currentRoutine.connections ?? [];
+
+    undoStackRef.current.push({
+      stages: JSON.parse(JSON.stringify(currentStages)),
+      connections: JSON.parse(JSON.stringify(currentConnections)),
+      actionName: next.actionName,
+    });
+
+    setCanUndo(true);
+    setCanRedo(redoStackRef.current.length > 0);
+
+    showUndoToast(`↪ Redone: ${next.actionName}`, false);
+    updateWorkflow(next.stages, next.connections, true, false, `Redo ${next.actionName}`);
+  };
+
   // Stage & Connection updates
   const handleUpdateStages = (newStages: RoutineStage[]) => {
-    updateWorkflow(newStages, undefined, false);
+    updateWorkflow(newStages, undefined, false, false);
   };
 
   const handleUpdateConnections = (newConnections: RoutineConnection[]) => {
-    updateWorkflow(undefined, newConnections, false);
+    updateWorkflow(undefined, newConnections, false, true, "Update connection");
   };
 
   // Add new stage
@@ -246,7 +317,7 @@ export const RoutineBuilder: React.FC<RoutineBuilderProps> = ({ backendBaseUrl }
       ];
     }
 
-    updateWorkflow(newStages, newConnections, false);
+    updateWorkflow(newStages, newConnections, false, true, `Add Step ${nextNum}`);
     setSelectedStageId(newStage.id);
   };
 
@@ -270,15 +341,18 @@ export const RoutineBuilder: React.FC<RoutineBuilderProps> = ({ backendBaseUrl }
     };
 
     const newStages = [...stages, branchStage];
-    updateWorkflow(newStages, undefined, false);
+    updateWorkflow(newStages, undefined, false, true, "Add branch");
     setSelectedStageId(branchStage.id);
   };
 
-  // Delete a stage immediately and permanently
+  // Delete a stage immediately and permanently with Undo option
   const handleDeleteStage = (stageId: string) => {
     if (!currentRoutine) return;
     const stages = currentRoutineRef.current?.stages ?? currentRoutine.stages ?? [];
     const connections = currentRoutineRef.current?.connections ?? currentRoutine.connections ?? [];
+
+    const targetStage = stages.find((s) => s.id === stageId);
+    const stageName = targetStage?.name ? `"${targetStage.name}"` : "stage";
 
     const newStages = stages.filter((s) => s.id !== stageId);
     const newConnections = connections.filter(
@@ -286,7 +360,8 @@ export const RoutineBuilder: React.FC<RoutineBuilderProps> = ({ backendBaseUrl }
     );
 
     setSelectedStageId((prev) => (prev === stageId ? null : prev));
-    updateWorkflow(newStages, newConnections, true);
+    updateWorkflow(newStages, newConnections, true, true, `Delete ${stageName}`);
+    showUndoToast(`Deleted ${stageName}. Press ⌘Z to undo.`);
   };
 
   // Open custom Create Routine Modal (No window.prompt)
@@ -466,6 +541,10 @@ export const RoutineBuilder: React.FC<RoutineBuilderProps> = ({ backendBaseUrl }
               onAddBranch={handleAddBranch}
               onDeleteStage={handleDeleteStage}
               saveStatus={saveStatus}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
             />
           ) : currentRoutine ? (
             <ExecutionView
@@ -475,6 +554,34 @@ export const RoutineBuilder: React.FC<RoutineBuilderProps> = ({ backendBaseUrl }
               onSwitchToBuilder={() => setViewMode("builder")}
             />
           ) : null}
+
+          {/* Floating Undo Notification Toast */}
+          {undoToast && (
+            <div className="rb-undo-toast" role="status">
+              <span>{undoToast.message}</span>
+              <button
+                type="button"
+                className="rb-undo-toast-btn"
+                onClick={() => {
+                  if (undoToast.showRedo) {
+                    handleRedo();
+                  } else {
+                    handleUndo();
+                  }
+                }}
+              >
+                {undoToast.showRedo ? "Redo (⌘⇧Z)" : "↩ Undo (⌘Z)"}
+              </button>
+              <button
+                type="button"
+                className="rb-undo-toast-close"
+                onClick={() => setUndoToast(null)}
+                title="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right Sidebar: Stage Settings (Visible in builder mode when stage is selected) */}

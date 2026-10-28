@@ -1408,3 +1408,71 @@
 @keyframes rbSpin {
   to { transform: rotate(360deg); }
 }
+
+/* Floating Undo Notification Toast */
+.rb-undo-toast {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(23, 21, 30, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid #8B72C7;
+  color: #F5F3FF;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 100;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 16px rgba(167, 139, 250, 0.25);
+  animation: slideUpToast 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpToast {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.rb-undo-toast-btn {
+  background: #A78BFA;
+  color: #08080B;
+  border: none;
+  font-weight: 700;
+  font-size: 0.74rem;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.rb-undo-toast-btn:hover {
+  opacity: 0.9;
+  transform: scale(1.04);
+}
+
+.rb-undo-toast-close {
+  background: transparent;
+  border: none;
+  color: #9690A3;
+  font-size: 0.76rem;
+  cursor: pointer;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.rb-undo-toast-close:hover {
+  color: #F5F3FF;
+}
+
