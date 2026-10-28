@@ -29,26 +29,47 @@ export const RoutineBuilder: React.FC<RoutineBuilderProps> = ({ backendBaseUrl }
   const activeAbortControllerRef = useRef<AbortController | null>(null);
   const requestVersionRef = useRef<number>(0);
 
-  // Load all routines
-  const loadRoutines = useCallback(async () => {
+  const saveStatusRef = useRef<"saved" | "saving" | "unsaved">("saved");
+  useEffect(() => {
+    saveStatusRef.current = saveStatus;
+  }, [saveStatus]);
+
+  const selectedRoutineIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    selectedRoutineIdRef.current = selectedRoutineId;
+  }, [selectedRoutineId]);
+
+  // Load all routines with polling support
+  const loadRoutines = useCallback(async (isPolling: boolean = false) => {
     try {
       const res = await fetch(`${backendBaseUrl}/api/routine-workflows`);
       if (res.ok) {
         const data: RoutineWorkflow[] = await res.json();
+        // Skip updating if a user is actively saving or modifying local state
+        if (isPolling && (saveStatusRef.current !== "saved" || autoSaveTimerRef.current)) {
+          return;
+        }
         setRoutines(data);
-        if (data.length > 0 && selectedRoutineId === null) {
+        if (data.length > 0 && selectedRoutineIdRef.current === null) {
           setSelectedRoutineId(data[0].id);
         }
       }
     } catch (err) {
-      console.error("Failed to load routines:", err);
+      if (!isPolling) console.error("Failed to load routines:", err);
     } finally {
-      setIsLoading(false);
+      if (!isPolling) setIsLoading(false);
     }
-  }, [backendBaseUrl, selectedRoutineId]);
+  }, [backendBaseUrl]);
 
+  // Auto-reload every 1 second (1000ms)
   useEffect(() => {
     loadRoutines();
+    const interval = setInterval(() => {
+      if (saveStatusRef.current === "saved" && !autoSaveTimerRef.current) {
+        loadRoutines(true);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
   }, [loadRoutines]);
 
   const currentRoutine = routines.find((r) => r.id === selectedRoutineId) || routines[0] || null;

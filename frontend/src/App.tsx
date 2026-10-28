@@ -532,8 +532,8 @@ export function App() {
     // 2. Fast retry after 2.5s (handles initial network connection handshake)
     const retryTimer = setTimeout(refreshAllData, 2500);
 
-    // 3. Continuous auto-sync every 6s so Mac, PC, and Mobile stay in lockstep
-    const syncInterval = setInterval(refreshAllData, 6000);
+    // 3. Continuous auto-sync every 1s so Mac, PC, and Mobile stay in real-time lockstep
+    const syncInterval = setInterval(refreshAllData, 1000);
 
     // 4. Instant sync on visibility change (when unlocking phone or switching back to app)
     const handleVisibility = () => {
