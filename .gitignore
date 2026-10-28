@@ -39,3 +39,6 @@ frontend/.next/
 
 # macOS system files
 .DS_Store
+
+# Binaries
+bin/

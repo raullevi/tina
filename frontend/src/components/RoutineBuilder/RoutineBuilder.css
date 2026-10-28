@@ -1,0 +1,1364 @@
+/* ==========================================================================
+   TINA — Dedicated Routine Builder Stylesheet
+   Color Palette:
+   App background: #08080B
+   Canvas background: #0D0D12
+   Stage card: #17151E
+   Selected border: #A78BFA
+   Primary accent: #A78BFA
+   Secondary lavender: #C4B5FD
+   Main text: #F5F3FF
+   Secondary text: #9690A3
+   Subtle border: #302D38
+   Connector lines: #8B72C7
+   ========================================================================== */
+
+.routine-builder-root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: calc(100vh - 54px);
+  background: #08080B;
+  color: #F5F3FF;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+  position: relative;
+}
+
+/* --------------------------------------------------------------------------
+   Top Header
+   -------------------------------------------------------------------------- */
+.rb-top-header {
+  height: 58px;
+  background: #08080B;
+  border-bottom: 1px solid #302D38;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
+  z-index: 20;
+}
+
+.rb-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.rb-header-title {
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: #F5F3FF;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.rb-header-subtitle {
+  font-size: 0.76rem;
+  color: #9690A3;
+  margin: 0;
+}
+
+/* View Switcher */
+.rb-view-switcher {
+  display: flex;
+  background: #17151E;
+  border: 1px solid #302D38;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.rb-switch-btn {
+  background: transparent;
+  border: none;
+  color: #9690A3;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.rb-switch-btn:hover {
+  color: #F5F3FF;
+}
+
+.rb-switch-btn.active {
+  background: #A78BFA;
+  color: #08080B;
+}
+
+.rb-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rb-btn-new-header {
+  background: rgba(167, 139, 250, 0.14);
+  border: 1px solid #A78BFA;
+  color: #C4B5FD;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.rb-btn-new-header:hover {
+  background: #A78BFA;
+  color: #08080B;
+}
+
+/* --------------------------------------------------------------------------
+   Workspace Layout (Three-part)
+   -------------------------------------------------------------------------- */
+.rb-workspace {
+  display: flex;
+  flex: 1;
+  height: calc(100% - 58px);
+  position: relative;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   1. Left Sidebar — Routine Navigation
+   -------------------------------------------------------------------------- */
+.rb-nav-sidebar {
+  width: 250px;
+  background: #0D0D12;
+  border-right: 1px solid #302D38;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  z-index: 15;
+}
+
+.rb-nav-collapsed {
+  width: 38px;
+  background: #0D0D12;
+  border-right: 1px solid #302D38;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.rb-nav-collapsed:hover {
+  background: #17151E;
+}
+
+.rb-nav-expand-btn {
+  background: transparent;
+  border: none;
+  color: #9690A3;
+  cursor: pointer;
+}
+
+.rb-nav-header {
+  padding: 12px;
+  border-bottom: 1px solid #302D38;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rb-nav-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rb-nav-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #F5F3FF;
+}
+
+.rb-nav-collapse-btn {
+  background: transparent;
+  border: none;
+  color: #9690A3;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.rb-nav-collapse-btn:hover {
+  color: #F5F3FF;
+}
+
+.rb-nav-search {
+  background: #17151E;
+  border: 1px solid #302D38;
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: #F5F3FF;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.rb-nav-search:focus {
+  border-color: #A78BFA;
+}
+
+.rb-nav-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rb-nav-empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: #9690A3;
+  font-size: 0.82rem;
+}
+
+.rb-btn-create-small {
+  margin-top: 8px;
+  background: rgba(167, 139, 250, 0.15);
+  border: 1px solid #A78BFA;
+  color: #C4B5FD;
+  padding: 5px 10px;
+  font-size: 0.78rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.rb-nav-item {
+  padding: 10px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rb-nav-item:hover {
+  background: #17151E;
+  border-color: #302D38;
+}
+
+.rb-nav-item.selected {
+  background: #17151E;
+  border-color: #A78BFA;
+}
+
+.rb-nav-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rb-nav-item-name {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #F5F3FF;
+}
+
+.rb-nav-status-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.rb-nav-status-badge.active {
+  background: rgba(167, 139, 250, 0.2);
+  color: #C4B5FD;
+}
+
+.rb-nav-status-badge.draft {
+  background: rgba(150, 144, 163, 0.2);
+  color: #9690A3;
+}
+
+.rb-nav-item-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #9690A3;
+}
+
+.rb-nav-progress-bar {
+  width: 100%;
+  height: 3px;
+  background: #302D38;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.rb-nav-progress-fill {
+  height: 100%;
+  background: #A78BFA;
+  border-radius: 2px;
+}
+
+.rb-nav-footer {
+  padding: 10px;
+  border-top: 1px solid #302D38;
+}
+
+.rb-btn-new-routine {
+  width: 100%;
+  background: #17151E;
+  border: 1px solid #302D38;
+  color: #C4B5FD;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.rb-btn-new-routine:hover {
+  background: rgba(167, 139, 250, 0.12);
+  border-color: #A78BFA;
+}
+
+/* --------------------------------------------------------------------------
+   2. Center — Workflow Canvas
+   -------------------------------------------------------------------------- */
+.rb-center-workspace {
+  flex: 1;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #0D0D12;
+}
+
+.rb-canvas-viewport {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  /* Subtle dotted grid */
+  background-image: radial-gradient(rgba(139, 114, 199, 0.15) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.rb-canvas-viewport:active {
+  cursor: grabbing;
+}
+
+/* Canvas Toolbar */
+.rb-canvas-toolbar {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(23, 21, 30, 0.9);
+  backdrop-filter: blur(16px);
+  border: 1px solid #302D38;
+  border-radius: 8px;
+  padding: 4px 8px;
+  z-index: 10;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.rb-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rb-toolbar-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #F5F3FF;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.rb-toolbar-btn:hover {
+  background: rgba(167, 139, 250, 0.12);
+  border-color: #302D38;
+}
+
+.rb-toolbar-btn.primary {
+  background: rgba(167, 139, 250, 0.18);
+  border-color: #A78BFA;
+  color: #C4B5FD;
+}
+
+.rb-toolbar-separator {
+  width: 1px;
+  height: 18px;
+  background: #302D38;
+  margin: 0 4px;
+}
+
+.rb-toolbar-icon-btn {
+  background: transparent;
+  border: none;
+  color: #9690A3;
+  font-size: 0.9rem;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rb-toolbar-icon-btn:hover {
+  background: #302D38;
+  color: #F5F3FF;
+}
+
+.rb-zoom-display {
+  font-size: 0.74rem;
+  color: #9690A3;
+  padding: 0 4px;
+  cursor: pointer;
+}
+
+.rb-toolbar-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 10px;
+  font-size: 0.72rem;
+  color: #9690A3;
+}
+
+.rb-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+.rb-status-dot.saving {
+  background: #eab308;
+}
+
+.rb-status-dot.unsaved {
+  background: #ef4444;
+}
+
+/* Canvas Surface */
+.rb-canvas-surface {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5000px;
+  height: 5000px;
+}
+
+/* SVG Connections */
+.rb-connections-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.rb-connection-group {
+  pointer-events: stroke;
+}
+
+.rb-connection-hitbox {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14px;
+  cursor: pointer;
+}
+
+.rb-connection-wire {
+  fill: none;
+  stroke: #8B72C7;
+  stroke-width: 2px;
+  transition: stroke 0.15s ease;
+}
+
+.rb-connection-wire.selected {
+  stroke: #C4B5FD;
+  stroke-width: 2.5px;
+}
+
+.rb-connection-wire.active-connecting {
+  stroke: #C4B5FD;
+  stroke-dasharray: 4 4;
+  animation: dashMove 1s linear infinite;
+}
+
+@keyframes dashMove {
+  from { stroke-dashoffset: 8; }
+  to { stroke-dashoffset: 0; }
+}
+
+.rb-conn-delete-badge {
+  pointer-events: all;
+  cursor: pointer;
+}
+
+/* Stage Cards */
+.rb-stage-card {
+  position: absolute;
+  background: #17151E;
+  border: 1px solid #302D38;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  cursor: move;
+  user-select: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.rb-stage-card:hover {
+  border-color: rgba(167, 139, 250, 0.4);
+}
+
+.rb-stage-card.selected {
+  border-color: #A78BFA;
+  box-shadow: 0 0 16px rgba(167, 139, 250, 0.2);
+}
+
+.rb-card-content {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.rb-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rb-card-icon-num {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.rb-stage-icon {
+  font-size: 1.1rem;
+}
+
+.rb-stage-num {
+  font-size: 0.7rem;
+  color: #9690A3;
+  font-weight: 600;
+}
+
+.rb-stage-title {
+  flex: 1;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #F5F3FF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rb-card-quick-delete {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #9690A3;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  padding: 0;
+  line-height: 1;
+}
+
+.rb-stage-card:hover .rb-card-quick-delete,
+.rb-stage-card.selected .rb-card-quick-delete {
+  opacity: 1;
+}
+
+.rb-card-quick-delete:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.rb-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #9690A3;
+}
+
+.rb-card-schedule {
+  color: #C4B5FD;
+}
+
+.rb-card-duration {
+  background: rgba(139, 114, 199, 0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* Connection Handles */
+.rb-handle {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  background: #17151E;
+  border: 2px solid #8B72C7;
+  border-radius: 50%;
+  cursor: crosshair;
+  z-index: 5;
+  transition: all 0.15s ease;
+}
+
+.rb-handle:hover {
+  background: #C4B5FD;
+  border-color: #F5F3FF;
+  transform: translateX(-50%) scale(1.3);
+}
+
+.rb-handle-top {
+  top: -6px;
+}
+
+.rb-handle-bottom {
+  bottom: -6px;
+}
+
+/* --------------------------------------------------------------------------
+   3. Right Sidebar — Stage Settings Panel
+   -------------------------------------------------------------------------- */
+.rb-stage-settings-panel {
+  width: 320px;
+  background: #17151E;
+  border-left: 1px solid #302D38;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  z-index: 15;
+}
+
+.rb-panel-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid #302D38;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rb-panel-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rb-panel-icon {
+  font-size: 1.3rem;
+}
+
+.rb-panel-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #F5F3FF;
+}
+
+.rb-panel-sub {
+  font-size: 0.68rem;
+  color: #9690A3;
+}
+
+.rb-panel-close-btn {
+  background: transparent;
+  border: none;
+  color: #9690A3;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.rb-panel-close-btn:hover {
+  color: #F5F3FF;
+}
+
+.rb-panel-tabs {
+  display: flex;
+  border-bottom: 1px solid #302D38;
+  padding: 0 8px;
+}
+
+.rb-panel-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #9690A3;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 10px 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.rb-panel-tab:hover {
+  color: #F5F3FF;
+}
+
+.rb-panel-tab.active {
+  color: #C4B5FD;
+  border-bottom-color: #A78BFA;
+}
+
+.rb-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.rb-settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rb-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rb-form-group label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #C4B5FD;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.rb-form-group input,
+.rb-form-group textarea,
+.rb-form-group select {
+  background: #0D0D12;
+  border: 1px solid #302D38;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #F5F3FF;
+  font-size: 0.82rem;
+  outline: none;
+}
+
+.rb-form-group input:focus,
+.rb-form-group textarea:focus,
+.rb-form-group select:focus {
+  border-color: #A78BFA;
+}
+
+.rb-form-hint {
+  font-size: 0.7rem;
+  color: #9690A3;
+  line-height: 1.4;
+}
+
+.rb-icon-picker {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.rb-icon-btn {
+  background: #0D0D12;
+  border: 1px solid #302D38;
+  border-radius: 4px;
+  padding: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.rb-icon-btn:hover {
+  border-color: #A78BFA;
+}
+
+.rb-icon-btn.selected {
+  background: rgba(167, 139, 250, 0.2);
+  border-color: #A78BFA;
+}
+
+.rb-empty-sub {
+  font-size: 0.74rem;
+  color: #9690A3;
+  font-style: italic;
+}
+
+.rb-link-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.rb-link-chip {
+  background: #0D0D12;
+  border: 1px solid #302D38;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 0.74rem;
+  color: #C4B5FD;
+}
+
+.rb-panel-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #302D38;
+}
+
+.rb-btn-delete-stage {
+  width: 100%;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rb-btn-delete-stage:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.rb-delete-confirm-box {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: rbModalFadeIn 0.15s ease-out;
+}
+
+.rb-delete-warn-text {
+  font-size: 0.76rem;
+  color: #fca5a5;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.rb-delete-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.rb-btn-confirm-delete {
+  flex: 1;
+  background: #ef4444;
+  border: none;
+  color: #ffffff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.rb-btn-cancel-delete {
+  background: transparent;
+  border: 1px solid #302D38;
+  color: #9690A3;
+  font-size: 0.74rem;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.rb-btn-cancel-delete:hover {
+  background: #17151E;
+  color: #F5F3FF;
+}
+
+/* --------------------------------------------------------------------------
+   4. Execution View Styles
+   -------------------------------------------------------------------------- */
+.rb-exec-container {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-sizing: border-box;
+}
+
+.rb-exec-banner {
+  background: #17151E;
+  border: 1px solid #302D38;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.rb-exec-routine-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #F5F3FF;
+  margin-bottom: 4px;
+}
+
+.rb-exec-routine-desc {
+  font-size: 0.82rem;
+  color: #9690A3;
+  margin-bottom: 12px;
+}
+
+.rb-exec-meta-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rb-exec-chip {
+  background: #0D0D12;
+  border: 1px solid #302D38;
+  color: #C4B5FD;
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.rb-exec-banner-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 180px;
+}
+
+.rb-exec-progress-num {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #C4B5FD;
+}
+
+.rb-exec-progress-label {
+  font-size: 0.76rem;
+  color: #9690A3;
+  margin-bottom: 8px;
+}
+
+.rb-exec-progress-bar-wrap {
+  width: 100%;
+  height: 6px;
+  background: #302D38;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.rb-exec-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #8B72C7, #A78BFA);
+  border-radius: 4px;
+}
+
+/* Next Action Hero Card */
+.rb-exec-hero-card {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.12) 0%, rgba(23, 21, 30, 0.95) 100%);
+  border: 1px solid #A78BFA;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 0 24px rgba(167, 139, 250, 0.15);
+}
+
+.rb-exec-hero-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rb-exec-hero-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #A78BFA;
+}
+
+.rb-exec-hero-time {
+  font-size: 0.75rem;
+  color: #C4B5FD;
+  font-weight: 600;
+}
+
+.rb-exec-hero-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.rb-exec-hero-icon {
+  font-size: 2.2rem;
+  background: #17151E;
+  border: 1px solid #302D38;
+  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rb-exec-hero-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #F5F3FF;
+  margin: 0 0 4px;
+}
+
+.rb-exec-hero-desc {
+  font-size: 0.84rem;
+  color: #9690A3;
+  margin: 0 0 6px;
+  line-height: 1.5;
+}
+
+.rb-exec-hero-sub {
+  font-size: 0.74rem;
+  color: #C4B5FD;
+}
+
+.rb-exec-hero-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.rb-btn-exec-complete {
+  background: #A78BFA;
+  border: none;
+  color: #08080B;
+  font-size: 0.86rem;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.rb-btn-exec-complete:hover {
+  background: #C4B5FD;
+}
+
+.rb-btn-exec-secondary {
+  background: #17151E;
+  border: 1px solid #302D38;
+  color: #F5F3FF;
+  font-size: 0.82rem;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rb-btn-exec-secondary:hover {
+  border-color: #A78BFA;
+}
+
+/* Completed Banner */
+.rb-exec-completed-card {
+  background: #17151E;
+  border: 1px solid #302D38;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+}
+
+.rb-exec-completed-icon {
+  font-size: 2.2rem;
+  margin-bottom: 8px;
+}
+
+.rb-btn-new-cycle {
+  margin-top: 14px;
+  background: #A78BFA;
+  color: #08080B;
+  border: none;
+  font-weight: 700;
+  font-size: 0.84rem;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* Stage Breakdown Checklist */
+.rb-exec-stages-list-card {
+  background: #17151E;
+  border: 1px solid #302D38;
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.rb-exec-card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.rb-exec-section-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #F5F3FF;
+  margin: 0;
+}
+
+.rb-btn-link-builder {
+  background: transparent;
+  border: none;
+  color: #A78BFA;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.rb-btn-link-builder:hover {
+  text-decoration: underline;
+}
+
+.rb-exec-stages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rb-exec-stage-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  background: #0D0D12;
+  border: 1px solid #302D38;
+  border-radius: 8px;
+  gap: 12px;
+}
+
+.rb-exec-stage-row.highlight {
+  border-color: #A78BFA;
+  background: rgba(167, 139, 250, 0.08);
+}
+
+.rb-exec-stage-num {
+  font-size: 0.74rem;
+  color: #9690A3;
+  font-weight: 700;
+  width: 18px;
+}
+
+.rb-exec-stage-icon {
+  font-size: 1.2rem;
+}
+
+.rb-exec-stage-info {
+  flex: 1;
+}
+
+.rb-exec-stage-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rb-exec-stage-name {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #F5F3FF;
+}
+
+.rb-exec-stage-schedule {
+  font-size: 0.72rem;
+  color: #C4B5FD;
+}
+
+.rb-exec-stage-notes {
+  font-size: 0.75rem;
+  color: #9690A3;
+  margin-top: 2px;
+}
+
+/* Badges */
+.rb-exec-badge {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.rb-exec-badge.completed {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.rb-exec-badge.ready {
+  background: rgba(167, 139, 250, 0.2);
+  color: #C4B5FD;
+}
+
+.rb-exec-badge.in-progress {
+  background: rgba(234, 179, 8, 0.15);
+  color: #facc15;
+}
+
+.rb-exec-badge.delayed {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.rb-exec-badge.skipped {
+  background: rgba(150, 144, 163, 0.2);
+  color: #9690A3;
+}
+
+.rb-exec-badge.waiting {
+  background: rgba(255, 255, 255, 0.05);
+  color: #9690A3;
+}
+
+.rb-btn-mini-check {
+  background: #A78BFA;
+  border: none;
+  color: #08080B;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+}
+
+.rb-btn-mini-check:hover {
+  transform: scale(1.15);
+  background: #C4B5FD;
+}
+
+/* Past Cycle Runs Table */
+.rb-exec-history-card {
+  background: #17151E;
+  border: 1px solid #302D38;
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.rb-exec-history-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.rb-exec-history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #0D0D12;
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
+
+.rb-history-date {
+  color: #F5F3FF;
+}
+
+.rb-history-score {
+  color: #9690A3;
+}
+
+.rb-history-badge {
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #C4B5FD;
+}
+
+/* Loading state */
+.rb-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: #C4B5FD;
+  font-size: 0.9rem;
+}
+
+.rb-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(167, 139, 250, 0.2);
+  border-top-color: #A78BFA;
+  border-radius: 50%;
+  animation: rbSpin 0.8s linear infinite;
+}
+
+@keyframes rbSpin {
+  to { transform: rotate(360deg); }
+}

@@ -30,15 +30,18 @@ trap cleanup SIGINT SIGTERM
 
 echo ""
 echo "=========================================================="
-echo "✨ Tina Life OS is Running 100% Locally on your Mac!"
+echo "✨ Tina Life OS is Running 100% Locally on your Mac (HTTPS)!"
 echo ""
-echo "💻 Mac Browser:    http://localhost:5173"
-echo "📱 iPhone/Network: http://${LOCAL_IP}:5173"
+echo "💻 Mac Laptop:     https://localhost:5173"
+echo "📱 Tailscale/PWA:  https://rauls-macbook-air.tail0020c7.ts.net/"
+echo "📱 Local Wi-Fi:    https://${LOCAL_IP}:5173"
+echo ""
+echo "⚡ PWA Ready: Open on mobile Brave/Chrome & tap 'Install app'!"
 echo "=========================================================="
 echo "   (Press Ctrl+C in this terminal to stop)"
 echo ""
 
 # Automatically open in default browser
-(sleep 1.5 && open "http://localhost:5173") &
+(sleep 1.5 && open "https://localhost:5173") &
 
 wait

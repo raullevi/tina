@@ -218,3 +218,42 @@ class ActivityEvent(Base):
     event_type = Column(String(50), nullable=False)  # completed, added, skipped
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
     details = Column(Text, nullable=True)
+
+
+# ---------------------------------------------------------
+# Dedicated Routine Builder & Workflow Engine Schema
+# ---------------------------------------------------------
+
+class RoutineWorkflow(Base):
+    """Reusable workflow definition made of stages, schedules, and connections."""
+    __tablename__ = "routine_workflows"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    recurrence = Column(String(50), default="weekly", nullable=False)  # daily, weekly, custom
+    status = Column(String(50), default="active", nullable=False)  # draft, active, archived
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    stages_json = Column(Text, default="[]", nullable=False)
+    connections_json = Column(Text, default="[]", nullable=False)
+    branch_rules_json = Column(Text, default="[]", nullable=False)
+
+    cycles = relationship("RoutineCycle", back_populates="routine", cascade="all, delete-orphan", order_by="desc(RoutineCycle.cycle_start)")
+
+
+class RoutineCycle(Base):
+    """Execution run or cycle for a routine workflow."""
+    __tablename__ = "routine_cycles"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    routine_id = Column(Integer, ForeignKey("routine_workflows.id", ondelete="CASCADE"), nullable=False, index=True)
+    cycle_start = Column(DateTime, default=datetime.utcnow, nullable=False)
+    cycle_end = Column(DateTime, nullable=True)
+    status = Column(String(50), default="in_progress", nullable=False)  # in_progress, completed, delayed
+    completed_at = Column(DateTime, nullable=True)
+    occurrences_json = Column(Text, default="{}", nullable=False)  # mapping: stage_id -> {status, completed_at, notes, scheduled_at}
+
+    routine = relationship("RoutineWorkflow", back_populates="cycles")
+

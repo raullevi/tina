@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from datetime import date, datetime
+import json
 import os
 import re
 import shutil
@@ -26,6 +27,8 @@ from app.db.models import (
     LifeNode,
     RoutineRule,
     TaskOccurrence,
+    RoutineWorkflow,
+    RoutineCycle,
 )
 from app.db.session import get_db, init_db
 from app.services.extractor import ExtractionService
@@ -67,7 +70,7 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:3000",
     ],
-    allow_origin_regex=r"^(https://.*\.vercel\.app|http://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?)$",
+    allow_origin_regex=r"^(https://.*\.vercel\.app|https://.*\.ts\.net|http://.*\.ts\.net|http://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|100\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -197,6 +200,62 @@ class PersonalFactResponse(BaseModel):
     key: str
     value: str
     source_transcript_id: Optional[int] = None
+
+
+class CreateDailyLogRequest(BaseModel):
+    log_date: Optional[str] = None
+    summary: str = Field(..., min_length=1)
+
+
+class UpdateDailyLogRequest(BaseModel):
+    log_date: Optional[str] = None
+    summary: Optional[str] = None
+
+
+class CreateActivityRequest(BaseModel):
+    category: str = Field(default="general")
+    name: str = Field(..., min_length=1)
+    duration_minutes: Optional[float] = None
+    activity_date: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class UpdateActivityRequest(BaseModel):
+    category: Optional[str] = None
+    name: Optional[str] = None
+    duration_minutes: Optional[float] = None
+    activity_date: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class CreateMeasurementRequest(BaseModel):
+    metric: str = Field(..., min_length=1)
+    value: float
+    unit: str = Field(default="count")
+    measurement_date: Optional[str] = None
+    review_status: str = Field(default="confirmed")
+    notes: Optional[str] = None
+
+
+class UpdateMeasurementRequest(BaseModel):
+    metric: Optional[str] = None
+    value: Optional[float] = None
+    unit: Optional[str] = None
+    measurement_date: Optional[str] = None
+    review_status: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class CreatePersonalFactRequest(BaseModel):
+    category: str = Field(default="fact")
+    key: str = Field(..., min_length=1)
+    value: str = Field(..., min_length=1)
+
+
+class UpdatePersonalFactRequest(BaseModel):
+    category: Optional[str] = None
+    key: Optional[str] = None
+    value: Optional[str] = None
 
 
 class MemoryExtractResponse(BaseModel):
@@ -787,6 +846,189 @@ async def list_personal_facts(
     ]
 
 
+# --- Daily Log Create / Update / Delete ---
+@app.post("/api/memory/daily-logs", response_model=DailyLogResponse, tags=["Memory"])
+async def create_daily_log(req: CreateDailyLogRequest, db: Session = Depends(get_db)) -> DailyLogResponse:
+    d = date.fromisoformat(req.log_date) if req.log_date else date.today()
+    log = DailyLog(log_date=d, summary=req.summary.strip())
+    db.add(log)
+    db.commit()
+    db.refresh(log)
+    db.add(AuditLog(action="created", entity="daily_logs", entity_id=log.id, description=f"Created daily log for {d}"))
+    db.commit()
+    return DailyLogResponse(id=log.id, log_date=log.log_date.isoformat(), summary=log.summary, created_at=log.created_at.isoformat())
+
+
+@app.put("/api/memory/daily-logs/{log_id}", response_model=DailyLogResponse, tags=["Memory"])
+async def update_daily_log(log_id: int, req: UpdateDailyLogRequest, db: Session = Depends(get_db)) -> DailyLogResponse:
+    log = db.query(DailyLog).filter(DailyLog.id == log_id).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Daily log not found")
+    if req.log_date:
+        try:
+            log.log_date = date.fromisoformat(req.log_date)
+        except ValueError:
+            pass
+    if req.summary is not None and req.summary.strip():
+        log.summary = req.summary.strip()
+    db.add(AuditLog(action="updated", entity="daily_logs", entity_id=log.id, description=f"Updated daily log id {log.id}"))
+    db.commit()
+    db.refresh(log)
+    return DailyLogResponse(id=log.id, log_date=log.log_date.isoformat(), summary=log.summary, created_at=log.created_at.isoformat())
+
+
+@app.delete("/api/memory/daily-logs/{log_id}", tags=["Memory"])
+async def delete_daily_log(log_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    log = db.query(DailyLog).filter(DailyLog.id == log_id).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Daily log not found")
+    db.delete(log)
+    db.add(AuditLog(action="deleted", entity="daily_logs", entity_id=log_id, description=f"Deleted daily log id {log_id}"))
+    db.commit()
+    return {"status": "deleted", "id": log_id}
+
+
+# --- Activity Create / Update / Delete ---
+@app.post("/api/memory/activities", response_model=ActivityResponse, tags=["Memory"])
+async def create_activity(req: CreateActivityRequest, db: Session = Depends(get_db)) -> ActivityResponse:
+    d = date.fromisoformat(req.activity_date) if req.activity_date else date.today()
+    act = Activity(category=req.category.strip(), name=req.name.strip(), duration_minutes=req.duration_minutes, activity_date=d, notes=req.notes)
+    db.add(act)
+    db.commit()
+    db.refresh(act)
+    db.add(AuditLog(action="created", entity="activities", entity_id=act.id, description=f"Created activity {act.name}"))
+    db.commit()
+    return ActivityResponse(id=act.id, category=act.category, name=act.name, duration_minutes=act.duration_minutes, activity_date=act.activity_date.isoformat(), notes=act.notes)
+
+
+@app.put("/api/memory/activities/{activity_id}", response_model=ActivityResponse, tags=["Memory"])
+async def update_activity(activity_id: int, req: UpdateActivityRequest, db: Session = Depends(get_db)) -> ActivityResponse:
+    act = db.query(Activity).filter(Activity.id == activity_id).first()
+    if not act:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    if req.category is not None and req.category.strip():
+        act.category = req.category.strip()
+    if req.name is not None and req.name.strip():
+        act.name = req.name.strip()
+    if req.duration_minutes is not None:
+        act.duration_minutes = req.duration_minutes
+    if req.activity_date:
+        try:
+            act.activity_date = date.fromisoformat(req.activity_date)
+        except ValueError:
+            pass
+    if req.notes is not None:
+        act.notes = req.notes
+    db.add(AuditLog(action="updated", entity="activities", entity_id=act.id, description=f"Updated activity id {act.id}"))
+    db.commit()
+    db.refresh(act)
+    return ActivityResponse(id=act.id, category=act.category, name=act.name, duration_minutes=act.duration_minutes, activity_date=act.activity_date.isoformat(), notes=act.notes)
+
+
+@app.delete("/api/memory/activities/{activity_id}", tags=["Memory"])
+async def delete_activity(activity_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    act = db.query(Activity).filter(Activity.id == activity_id).first()
+    if not act:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    name = act.name
+    db.delete(act)
+    db.add(AuditLog(action="deleted", entity="activities", entity_id=activity_id, description=f"Deleted activity id {activity_id} ({name})"))
+    db.commit()
+    return {"status": "deleted", "id": activity_id, "name": name}
+
+
+# --- Measurement Create / Update / Delete ---
+@app.post("/api/memory/measurements", response_model=MeasurementResponse, tags=["Memory"])
+async def create_measurement(req: CreateMeasurementRequest, db: Session = Depends(get_db)) -> MeasurementResponse:
+    d = date.fromisoformat(req.measurement_date) if req.measurement_date else date.today()
+    meas = Measurement(metric=req.metric.strip(), value=req.value, unit=req.unit.strip(), measurement_date=d, review_status=req.review_status, notes=req.notes)
+    db.add(meas)
+    db.commit()
+    db.refresh(meas)
+    db.add(AuditLog(action="created", entity="measurements", entity_id=meas.id, description=f"Created measurement {meas.metric}"))
+    db.commit()
+    return MeasurementResponse(id=meas.id, metric=meas.metric, value=meas.value, unit=meas.unit, measurement_date=meas.measurement_date.isoformat(), review_status=meas.review_status, notes=meas.notes)
+
+
+@app.put("/api/memory/measurements/{measurement_id}", response_model=MeasurementResponse, tags=["Memory"])
+async def update_measurement(measurement_id: int, req: UpdateMeasurementRequest, db: Session = Depends(get_db)) -> MeasurementResponse:
+    meas = db.query(Measurement).filter(Measurement.id == measurement_id).first()
+    if not meas:
+        raise HTTPException(status_code=404, detail="Measurement not found")
+    if req.metric is not None and req.metric.strip():
+        meas.metric = req.metric.strip()
+    if req.value is not None:
+        meas.value = req.value
+    if req.unit is not None and req.unit.strip():
+        meas.unit = req.unit.strip()
+    if req.measurement_date:
+        try:
+            meas.measurement_date = date.fromisoformat(req.measurement_date)
+        except ValueError:
+            pass
+    if req.review_status is not None:
+        meas.review_status = req.review_status
+    if req.notes is not None:
+        meas.notes = req.notes
+    db.add(AuditLog(action="updated", entity="measurements", entity_id=meas.id, description=f"Updated measurement id {meas.id}"))
+    db.commit()
+    db.refresh(meas)
+    return MeasurementResponse(id=meas.id, metric=meas.metric, value=meas.value, unit=meas.unit, measurement_date=meas.measurement_date.isoformat(), review_status=meas.review_status, notes=meas.notes)
+
+
+@app.delete("/api/memory/measurements/{measurement_id}", tags=["Memory"])
+async def delete_measurement(measurement_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    meas = db.query(Measurement).filter(Measurement.id == measurement_id).first()
+    if not meas:
+        raise HTTPException(status_code=404, detail="Measurement not found")
+    metric = meas.metric
+    db.delete(meas)
+    db.add(AuditLog(action="deleted", entity="measurements", entity_id=measurement_id, description=f"Deleted measurement id {measurement_id} ({metric})"))
+    db.commit()
+    return {"status": "deleted", "id": measurement_id, "metric": metric}
+
+
+# --- Personal Fact Create / Update / Delete ---
+@app.post("/api/memory/facts", response_model=PersonalFactResponse, tags=["Memory"])
+async def create_personal_fact(req: CreatePersonalFactRequest, db: Session = Depends(get_db)) -> PersonalFactResponse:
+    fact = PersonalFact(category=req.category.strip(), key=req.key.strip(), value=req.value.strip())
+    db.add(fact)
+    db.commit()
+    db.refresh(fact)
+    db.add(AuditLog(action="created", entity="facts", entity_id=fact.id, description=f"Created fact {fact.key}"))
+    db.commit()
+    return PersonalFactResponse(id=fact.id, category=fact.category, key=fact.key, value=fact.value)
+
+
+@app.put("/api/memory/facts/{fact_id}", response_model=PersonalFactResponse, tags=["Memory"])
+async def update_personal_fact(fact_id: int, req: UpdatePersonalFactRequest, db: Session = Depends(get_db)) -> PersonalFactResponse:
+    fact = db.query(PersonalFact).filter(PersonalFact.id == fact_id).first()
+    if not fact:
+        raise HTTPException(status_code=404, detail="Fact not found")
+    if req.category is not None and req.category.strip():
+        fact.category = req.category.strip()
+    if req.key is not None and req.key.strip():
+        fact.key = req.key.strip()
+    if req.value is not None and req.value.strip():
+        fact.value = req.value.strip()
+    db.add(AuditLog(action="updated", entity="facts", entity_id=fact.id, description=f"Updated fact id {fact.id}"))
+    db.commit()
+    db.refresh(fact)
+    return PersonalFactResponse(id=fact.id, category=fact.category, key=fact.key, value=fact.value)
+
+
+@app.delete("/api/memory/facts/{fact_id}", tags=["Memory"])
+async def delete_personal_fact(fact_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    fact = db.query(PersonalFact).filter(PersonalFact.id == fact_id).first()
+    if not fact:
+        raise HTTPException(status_code=404, detail="Fact not found")
+    key = fact.key
+    db.delete(fact)
+    db.add(AuditLog(action="deleted", entity="facts", entity_id=fact_id, description=f"Deleted fact id {fact_id} ({key})"))
+    db.commit()
+    return {"status": "deleted", "id": fact_id, "key": key}
+
+
 @app.get("/api/memory/search", tags=["Memory"])
 async def search_memory(
     q: str = Query(..., min_length=1, description="Keyword search query"),
@@ -1258,6 +1500,160 @@ async def complete_task_occurrence(
     return {"status": "completed", "task_id": occ.id, "title": occ.title}
 
 
+class UpdateTaskRequest(BaseModel):
+    title: Optional[str] = None
+    cluster: Optional[str] = None
+    duration_minutes: Optional[int] = None
+    status: Optional[str] = None
+    due_date: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@app.put("/api/tasks/{task_id}", tags=["Life OS"])
+async def update_task(
+    task_id: int,
+    req: UpdateTaskRequest,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Update an existing task occurrence and its associated routine rule."""
+    occ = db.query(TaskOccurrence).filter(TaskOccurrence.id == task_id).first()
+    if not occ:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    if req.title is not None and req.title.strip():
+        occ.title = req.title.strip()
+    if req.status is not None:
+        occ.status = req.status
+        if req.status == "completed" and not occ.completed_at:
+            occ.completed_at = datetime.utcnow()
+        elif req.status == "pending":
+            occ.completed_at = None
+    if req.notes is not None:
+        occ.notes = req.notes
+    if req.due_date is not None:
+        try:
+            occ.due_date = date.fromisoformat(req.due_date)
+        except ValueError:
+            pass
+
+    # Update linked routine if present
+    if occ.routine_id:
+        routine = db.query(RoutineRule).filter(RoutineRule.id == occ.routine_id).first()
+        if routine:
+            if req.title is not None and req.title.strip():
+                routine.name = req.title.strip()
+            if req.duration_minutes is not None:
+                routine.duration_minutes = req.duration_minutes
+            if req.cluster is not None and req.cluster.strip():
+                node = db.query(LifeNode).filter(LifeNode.name.ilike(req.cluster.strip())).first()
+                if not node:
+                    node = LifeNode(name=req.cluster.strip(), type="cluster")
+                    db.add(node)
+                    db.flush()
+                routine.node_id = node.id
+
+    db.commit()
+    db.refresh(occ)
+
+    cluster_name = occ.routine.node.name if (occ.routine and occ.routine.node) else (req.cluster or "Personal")
+    duration = occ.routine.duration_minutes if occ.routine else req.duration_minutes
+
+    return {
+        "id": occ.id,
+        "title": occ.title,
+        "cluster": cluster_name,
+        "duration_minutes": duration,
+        "status": occ.status,
+        "due_date": occ.due_date.isoformat(),
+        "completed_at": occ.completed_at.isoformat() if occ.completed_at else None,
+        "notes": occ.notes,
+    }
+
+
+@app.delete("/api/tasks/{task_id}", tags=["Life OS"])
+async def delete_task(
+    task_id: int,
+    delete_rule: bool = True,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Delete a task occurrence, and optionally its routine rule so it doesn't reappear."""
+    occ = db.query(TaskOccurrence).filter(TaskOccurrence.id == task_id).first()
+    if not occ:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    title = occ.title
+    routine_id = occ.routine_id
+    db.delete(occ)
+
+    if delete_rule and routine_id:
+        rule = db.query(RoutineRule).filter(RoutineRule.id == routine_id).first()
+        if rule:
+            db.delete(rule)
+
+    db.commit()
+    return {"status": "deleted", "task_id": task_id, "title": title}
+
+
+class UpdateRoutineRequest(BaseModel):
+    name: Optional[str] = None
+    schedule_type: Optional[str] = None
+    duration_minutes: Optional[int] = None
+    enabled: Optional[bool] = None
+    cluster: Optional[str] = None
+
+
+@app.put("/api/routines/{routine_id}", tags=["Life OS"])
+async def update_routine(
+    routine_id: int,
+    req: UpdateRoutineRequest,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Update a routine rule."""
+    routine = db.query(RoutineRule).filter(RoutineRule.id == routine_id).first()
+    if not routine:
+        raise HTTPException(status_code=404, detail="Routine not found")
+
+    if req.name is not None and req.name.strip():
+        routine.name = req.name.strip()
+    if req.schedule_type is not None:
+        routine.schedule_type = req.schedule_type
+    if req.duration_minutes is not None:
+        routine.duration_minutes = req.duration_minutes
+    if req.enabled is not None:
+        routine.enabled = req.enabled
+    if req.cluster is not None and req.cluster.strip():
+        node = db.query(LifeNode).filter(LifeNode.name.ilike(req.cluster.strip())).first()
+        if node:
+            routine.node_id = node.id
+
+    db.commit()
+    db.refresh(routine)
+    return {
+        "id": routine.id,
+        "name": routine.name,
+        "schedule_type": routine.schedule_type,
+        "duration_minutes": routine.duration_minutes,
+        "enabled": routine.enabled,
+        "cluster": routine.node.name if routine.node else None,
+    }
+
+
+@app.delete("/api/routines/{routine_id}", tags=["Life OS"])
+async def delete_routine(
+    routine_id: int,
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    """Delete a routine rule and all its occurrences."""
+    routine = db.query(RoutineRule).filter(RoutineRule.id == routine_id).first()
+    if not routine:
+        raise HTTPException(status_code=404, detail="Routine not found")
+
+    name = routine.name
+    db.delete(routine)
+    db.commit()
+    return {"status": "deleted", "routine_id": routine_id, "name": name}
+
+
 @app.get("/api/next_action", tags=["Life OS"])
 async def get_next_action(db: Session = Depends(get_db)) -> Dict[str, Any]:
     """Get the next recommended action based on today's schedule."""
@@ -1326,5 +1722,489 @@ async def create_manual_task_endpoint(
         subtasks=req.subtasks,
         trigger_event=req.triggerEvent,
     )
+
+
+# ---------------------------------------------------------
+# TINA — Routine Builder & Workflow Engine Endpoints
+# ---------------------------------------------------------
+
+DEFAULT_LAUNDRY_ROUTINE = {
+    "name": "Laundry",
+    "description": "Keep clothes clean, dry, ironed, and stored every week.",
+    "recurrence": "weekly",
+    "status": "active",
+    "stages": [
+        {
+            "id": "stage-1",
+            "name": "Collect clothes",
+            "icon": "🧺",
+            "description": "Put worn clothes in the laundry bin daily.",
+            "schedule": "Daily",
+            "trigger": "scheduled",
+            "duration_minutes": 5,
+            "dependency": None,
+            "completion_rule": "manual",
+            "missed_behavior": "reschedule",
+            "position": {"x": 260, "y": 60}
+        },
+        {
+            "id": "stage-2",
+            "name": "Wash clothes",
+            "icon": "🧼",
+            "description": "Run washing machine with detergent and softener.",
+            "schedule": "Friday or Saturday",
+            "trigger": "after_stage",
+            "duration_minutes": 45,
+            "dependency": "stage-1",
+            "completion_rule": "manual",
+            "missed_behavior": "delayed",
+            "position": {"x": 260, "y": 210}
+        },
+        {
+            "id": "stage-3",
+            "name": "Dry clothes",
+            "icon": "☀️",
+            "description": "Hang clothes on drying rack or transfer to dryer.",
+            "schedule": "After washing",
+            "trigger": "after_stage",
+            "duration_minutes": 60,
+            "dependency": "stage-2",
+            "completion_rule": "manual",
+            "missed_behavior": "delayed",
+            "position": {"x": 260, "y": 360}
+        },
+        {
+            "id": "stage-4",
+            "name": "Iron clothes",
+            "icon": "👔",
+            "description": "Iron work shirts and clean garments.",
+            "schedule": "Sunday",
+            "trigger": "after_stage",
+            "duration_minutes": 30,
+            "dependency": "stage-3",
+            "completion_rule": "manual",
+            "missed_behavior": "wait_dependency",
+            "position": {"x": 260, "y": 510}
+        },
+        {
+            "id": "stage-5",
+            "name": "Store clothes",
+            "icon": "🗄️",
+            "description": "Fold and put clean clothes away in closets and drawers.",
+            "schedule": "After ironing",
+            "trigger": "after_stage",
+            "duration_minutes": 15,
+            "dependency": "stage-4",
+            "completion_rule": "manual",
+            "missed_behavior": "delayed",
+            "position": {"x": 260, "y": 660}
+        }
+    ],
+    "connections": [
+        {"id": "conn-1-2", "sourceStageId": "stage-1", "targetStageId": "stage-2", "type": "sequence"},
+        {"id": "conn-2-3", "sourceStageId": "stage-2", "targetStageId": "stage-3", "type": "sequence"},
+        {"id": "conn-3-4", "sourceStageId": "stage-3", "targetStageId": "stage-4", "type": "sequence"},
+        {"id": "conn-4-5", "sourceStageId": "stage-4", "targetStageId": "stage-5", "type": "sequence"}
+    ],
+    "branch_rules": []
+}
+
+
+def ensure_seed_routines(db: Session):
+    existing = db.query(RoutineWorkflow).first()
+    if not existing:
+        seed = RoutineWorkflow(
+            name=DEFAULT_LAUNDRY_ROUTINE["name"],
+            description=DEFAULT_LAUNDRY_ROUTINE["description"],
+            recurrence=DEFAULT_LAUNDRY_ROUTINE["recurrence"],
+            status=DEFAULT_LAUNDRY_ROUTINE["status"],
+            stages_json=json.dumps(DEFAULT_LAUNDRY_ROUTINE["stages"]),
+            connections_json=json.dumps(DEFAULT_LAUNDRY_ROUTINE["connections"]),
+            branch_rules_json=json.dumps(DEFAULT_LAUNDRY_ROUTINE["branch_rules"]),
+        )
+        db.add(seed)
+        db.flush()
+        initial_occurrences = {
+            "stage-1": {"status": "ready", "completed_at": None, "notes": None},
+            "stage-2": {"status": "waiting", "completed_at": None, "notes": None},
+            "stage-3": {"status": "waiting", "completed_at": None, "notes": None},
+            "stage-4": {"status": "waiting", "completed_at": None, "notes": None},
+            "stage-5": {"status": "waiting", "completed_at": None, "notes": None},
+        }
+        cycle = RoutineCycle(
+            routine_id=seed.id,
+            cycle_start=datetime.utcnow(),
+            status="in_progress",
+            occurrences_json=json.dumps(initial_occurrences),
+        )
+        db.add(cycle)
+        db.commit()
+
+
+def format_routine_dict(r: RoutineWorkflow, db: Session, include_history: bool = False) -> Dict[str, Any]:
+    stages = json.loads(r.stages_json or "[]")
+    connections = json.loads(r.connections_json or "[]")
+    branch_rules = json.loads(r.branch_rules_json or "[]")
+
+    active_cycle_row = (
+        db.query(RoutineCycle)
+        .filter(RoutineCycle.routine_id == r.id)
+        .order_by(RoutineCycle.id.desc())
+        .first()
+    )
+    if not active_cycle_row:
+        initial_occ = {
+            s.get("id"): {"status": "ready" if i == 0 else "waiting", "completed_at": None, "notes": None}
+            for i, s in enumerate(stages)
+        }
+        active_cycle_row = RoutineCycle(
+            routine_id=r.id,
+            cycle_start=datetime.utcnow(),
+            status="in_progress",
+            occurrences_json=json.dumps(initial_occ),
+        )
+        db.add(active_cycle_row)
+        db.commit()
+        db.refresh(active_cycle_row)
+
+    occurrences = json.loads(active_cycle_row.occurrences_json or "{}")
+
+    # Update dependencies state for any uncompleted stage
+    for s in stages:
+        sid = s.get("id")
+        if sid not in occurrences:
+            occurrences[sid] = {"status": "waiting", "completed_at": None, "notes": None}
+        elif occurrences[sid].get("status") == "waiting":
+            deps = [c["sourceStageId"] for c in connections if c.get("targetStageId") == sid]
+            if not deps or all(occurrences.get(d, {}).get("status") in ("completed", "skipped") for d in deps):
+                occurrences[sid]["status"] = "ready"
+
+    total_stages = len(stages)
+    completed_count = sum(1 for sid, occ in occurrences.items() if occ.get("status") in ("completed", "skipped"))
+    pct = int((completed_count / total_stages * 100)) if total_stages > 0 else 0
+
+    next_actionable = None
+    for s in stages:
+        sid = s.get("id")
+        occ = occurrences.get(sid, {})
+        st = occ.get("status", "waiting")
+        if st in ("ready", "in_progress", "delayed"):
+            next_actionable = sid
+            break
+
+    cycle_data = {
+        "id": active_cycle_row.id,
+        "cycle_start": active_cycle_row.cycle_start.isoformat(),
+        "cycle_end": active_cycle_row.cycle_end.isoformat() if active_cycle_row.cycle_end else None,
+        "status": active_cycle_row.status,
+        "completed_at": active_cycle_row.completed_at.isoformat() if active_cycle_row.completed_at else None,
+        "occurrences": occurrences,
+        "progress": {
+            "completed": completed_count,
+            "total": total_stages,
+            "percentage": pct,
+        },
+        "next_actionable_stage_id": next_actionable,
+    }
+
+    history = []
+    if include_history:
+        past_cycles = (
+            db.query(RoutineCycle)
+            .filter(RoutineCycle.routine_id == r.id)
+            .order_by(RoutineCycle.id.desc())
+            .limit(10)
+            .all()
+        )
+        for c in past_cycles:
+            occ_c = json.loads(c.occurrences_json or "{}")
+            comp_c = sum(1 for sid, occ in occ_c.items() if occ.get("status") in ("completed", "skipped"))
+            history.append({
+                "id": c.id,
+                "cycle_start": c.cycle_start.isoformat(),
+                "cycle_end": c.cycle_end.isoformat() if c.cycle_end else None,
+                "status": c.status,
+                "completed_at": c.completed_at.isoformat() if c.completed_at else None,
+                "completed_stages": comp_c,
+                "total_stages": total_stages,
+            })
+
+    return {
+        "id": r.id,
+        "name": r.name,
+        "description": r.description or "",
+        "recurrence": r.recurrence,
+        "status": r.status,
+        "created_at": r.created_at.isoformat(),
+        "updated_at": r.updated_at.isoformat(),
+        "stages": stages,
+        "connections": connections,
+        "branch_rules": branch_rules,
+        "active_cycle": cycle_data,
+        "history": history,
+    }
+
+
+class CreateRoutineRequest(BaseModel):
+    name: str = Field(..., min_length=1)
+    description: Optional[str] = None
+    recurrence: str = Field(default="weekly")
+    status: str = Field(default="active")
+    stages: List[Dict[str, Any]] = Field(default_factory=list)
+    connections: List[Dict[str, Any]] = Field(default_factory=list)
+    branch_rules: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class UpdateRoutineRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    recurrence: Optional[str] = None
+    status: Optional[str] = None
+
+
+class UpdateWorkflowRequest(BaseModel):
+    stages: List[Dict[str, Any]]
+    connections: List[Dict[str, Any]]
+    branch_rules: Optional[List[Dict[str, Any]]] = None
+
+
+class AdvanceCycleRequest(BaseModel):
+    stage_id: str
+    status: str = Field(..., description="completed, delayed, skipped, in_progress, ready, waiting")
+    notes: Optional[str] = None
+
+
+@app.get("/api/routine-workflows", tags=["Routine Builder"])
+async def list_routines(db: Session = Depends(get_db)):
+    """Lists all routines with stages, connections, and active cycle summaries."""
+    ensure_seed_routines(db)
+    routines = db.query(RoutineWorkflow).order_by(RoutineWorkflow.id.asc()).all()
+    return [format_routine_dict(r, db, include_history=False) for r in routines]
+
+
+@app.post("/api/routine-workflows", tags=["Routine Builder"])
+async def create_routine(req: CreateRoutineRequest, db: Session = Depends(get_db)):
+    """Creates a new routine workflow and initializes its first cycle."""
+    # If no stages provided, provide a starter stage
+    stages = req.stages
+    if not stages:
+        stages = [
+            {
+                "id": "stage-1",
+                "name": "First Step",
+                "icon": "✨",
+                "description": "Initial stage of this routine.",
+                "schedule": "Daily",
+                "trigger": "scheduled",
+                "duration_minutes": 15,
+                "dependency": None,
+                "completion_rule": "manual",
+                "missed_behavior": "reschedule",
+                "position": {"x": 260, "y": 80},
+            }
+        ]
+
+    routine = RoutineWorkflow(
+        name=req.name,
+        description=req.description,
+        recurrence=req.recurrence,
+        status=req.status,
+        stages_json=json.dumps(stages),
+        connections_json=json.dumps(req.connections),
+        branch_rules_json=json.dumps(req.branch_rules),
+    )
+    db.add(routine)
+    db.flush()
+
+    initial_occ = {
+        s.get("id"): {"status": "ready" if i == 0 else "waiting", "completed_at": None, "notes": None}
+        for i, s in enumerate(stages)
+    }
+    cycle = RoutineCycle(
+        routine_id=routine.id,
+        cycle_start=datetime.utcnow(),
+        status="in_progress",
+        occurrences_json=json.dumps(initial_occ),
+    )
+    db.add(cycle)
+    db.commit()
+    db.refresh(routine)
+
+    return format_routine_dict(routine, db, include_history=True)
+
+
+@app.get("/api/routine-workflows/{routine_id}", tags=["Routine Builder"])
+async def get_routine(routine_id: int, db: Session = Depends(get_db)):
+    """Retrieves full details for a routine, including workflow canvas and cycle history."""
+    routine = db.query(RoutineWorkflow).filter(RoutineWorkflow.id == routine_id).first()
+    if not routine:
+        raise HTTPException(status_code=404, detail="Routine not found")
+    return format_routine_dict(routine, db, include_history=True)
+
+
+@app.put("/api/routine-workflows/{routine_id}", tags=["Routine Builder"])
+async def update_routine(routine_id: int, req: UpdateRoutineRequest, db: Session = Depends(get_db)):
+    """Updates high-level metadata (name, description, recurrence, status) for a routine."""
+    routine = db.query(RoutineWorkflow).filter(RoutineWorkflow.id == routine_id).first()
+    if not routine:
+        raise HTTPException(status_code=404, detail="Routine not found")
+
+    if req.name is not None:
+        routine.name = req.name.strip()
+    if req.description is not None:
+        routine.description = req.description.strip()
+    if req.recurrence is not None:
+        routine.recurrence = req.recurrence
+    if req.status is not None:
+        routine.status = req.status
+    routine.updated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(routine)
+    return format_routine_dict(routine, db, include_history=True)
+
+
+@app.delete("/api/routine-workflows/{routine_id}", tags=["Routine Builder"])
+async def delete_routine(routine_id: int, db: Session = Depends(get_db)):
+    """Deletes a routine workflow and all associated cycle records."""
+    routine = db.query(RoutineWorkflow).filter(RoutineWorkflow.id == routine_id).first()
+    if not routine:
+        raise HTTPException(status_code=404, detail="Routine not found")
+    db.delete(routine)
+    db.commit()
+    return {"status": "deleted", "id": routine_id}
+
+
+@app.put("/api/routine-workflows/{routine_id}/workflow", tags=["Routine Builder"])
+async def update_workflow(routine_id: int, req: UpdateWorkflowRequest, db: Session = Depends(get_db)):
+    """Saves workflow stages (positions, triggers, schedules) and connection links."""
+    routine = db.query(RoutineWorkflow).filter(RoutineWorkflow.id == routine_id).first()
+    if not routine:
+        raise HTTPException(status_code=404, detail="Routine not found")
+
+    routine.stages_json = json.dumps(req.stages)
+    routine.connections_json = json.dumps(req.connections)
+    if req.branch_rules is not None:
+        routine.branch_rules_json = json.dumps(req.branch_rules)
+    routine.updated_at = datetime.utcnow()
+
+    # Sync active cycle occurrences for any newly added stages and prune removed stages
+    active_cycle_row = (
+        db.query(RoutineCycle)
+        .filter(RoutineCycle.routine_id == routine.id)
+        .order_by(RoutineCycle.id.desc())
+        .first()
+    )
+    if active_cycle_row:
+        occ = json.loads(active_cycle_row.occurrences_json or "{}")
+        valid_stage_ids = {s.get("id") for s in req.stages if s.get("id")}
+        # Remove occurrences for stages that were deleted
+        occ = {k: v for k, v in occ.items() if k in valid_stage_ids}
+        for s in req.stages:
+            sid = s.get("id")
+            if sid and sid not in occ:
+                occ[sid] = {"status": "waiting", "completed_at": None, "notes": None}
+        active_cycle_row.occurrences_json = json.dumps(occ)
+
+    db.commit()
+    db.refresh(routine)
+    return format_routine_dict(routine, db, include_history=False)
+
+
+@app.post("/api/routine-workflows/{routine_id}/cycle/advance", tags=["Routine Builder"])
+async def advance_routine_cycle(routine_id: int, req: AdvanceCycleRequest, db: Session = Depends(get_db)):
+    """Advances stage status in the active cycle (e.g. marked complete or delayed)."""
+    routine = db.query(RoutineWorkflow).filter(RoutineWorkflow.id == routine_id).first()
+    if not routine:
+        raise HTTPException(status_code=404, detail="Routine not found")
+
+    cycle = (
+        db.query(RoutineCycle)
+        .filter(RoutineCycle.routine_id == routine.id)
+        .order_by(RoutineCycle.id.desc())
+        .first()
+    )
+    if not cycle:
+        cycle = RoutineCycle(
+            routine_id=routine.id,
+            cycle_start=datetime.utcnow(),
+            status="in_progress",
+            occurrences_json="{}",
+        )
+        db.add(cycle)
+        db.flush()
+
+    occurrences = json.loads(cycle.occurrences_json or "{}")
+    stage_occ = occurrences.get(req.stage_id, {})
+    stage_occ["status"] = req.status
+    if req.status == "completed":
+        stage_occ["completed_at"] = datetime.utcnow().isoformat()
+    if req.notes is not None:
+        stage_occ["notes"] = req.notes
+    occurrences[req.stage_id] = stage_occ
+
+    stages = json.loads(routine.stages_json or "[]")
+    connections = json.loads(routine.connections_json or "[]")
+
+    # If completed, unlock downstream dependents
+    if req.status in ("completed", "skipped"):
+        downstream = [c["targetStageId"] for c in connections if c.get("sourceStageId") == req.stage_id]
+        for ds in downstream:
+            ds_occ = occurrences.get(ds, {})
+            if ds_occ.get("status") in ("waiting", None):
+                # Check if all upstream sources are now complete
+                upstream = [c["sourceStageId"] for c in connections if c.get("targetStageId") == ds]
+                if all(occurrences.get(u, {}).get("status") in ("completed", "skipped") for u in upstream):
+                    ds_occ["status"] = "ready"
+                    occurrences[ds] = ds_occ
+
+    # Check if all stages in routine are complete
+    all_done = all(occurrences.get(s.get("id"), {}).get("status") in ("completed", "skipped") for s in stages)
+    if all_done and len(stages) > 0:
+        cycle.status = "completed"
+        cycle.completed_at = datetime.utcnow()
+        cycle.cycle_end = datetime.utcnow()
+
+    cycle.occurrences_json = json.dumps(occurrences)
+    db.commit()
+    db.refresh(routine)
+
+    return format_routine_dict(routine, db, include_history=True)
+
+
+@app.post("/api/routine-workflows/{routine_id}/cycle/reset", tags=["Routine Builder"])
+
+async def reset_routine_cycle(routine_id: int, db: Session = Depends(get_db)):
+    """Archives current cycle and initializes a fresh cycle run."""
+    routine = db.query(RoutineWorkflow).filter(RoutineWorkflow.id == routine_id).first()
+    if not routine:
+        raise HTTPException(status_code=404, detail="Routine not found")
+
+    # Mark active cycle ended
+    prev_cycle = (
+        db.query(RoutineCycle)
+        .filter(RoutineCycle.routine_id == routine.id)
+        .order_by(RoutineCycle.id.desc())
+        .first()
+    )
+    if prev_cycle and not prev_cycle.cycle_end:
+        prev_cycle.cycle_end = datetime.utcnow()
+
+    stages = json.loads(routine.stages_json or "[]")
+    initial_occ = {
+        s.get("id"): {"status": "ready" if i == 0 else "waiting", "completed_at": None, "notes": None}
+        for i, s in enumerate(stages)
+    }
+    new_cycle = RoutineCycle(
+        routine_id=routine.id,
+        cycle_start=datetime.utcnow(),
+        status="in_progress",
+        occurrences_json=json.dumps(initial_occ),
+    )
+    db.add(new_cycle)
+    db.commit()
+
+    return format_routine_dict(routine, db, include_history=True)
+
 
 

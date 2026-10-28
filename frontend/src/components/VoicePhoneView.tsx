@@ -62,14 +62,6 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
   const [showExploreCard, setShowExploreCard] = useState(true);
   const [showNavDrawer, setShowNavDrawer] = useState(false);
 
-  // Notification Toast (Screen 2: Calendar / Action Scheduled banner)
-  const [toast, setToast] = useState<{
-    icon: string;
-    title: string;
-    date: string;
-    detail: string;
-    status: string;
-  } | null>(null);
 
   // Chat messages thread matching Screen 3 with Tina
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -149,24 +141,9 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
         setMessages((prev) => [...prev, replyMsg]);
-
-        // Trigger top floating confirmation toast card (Screen 2)
-        setToast({
-          icon: "📅",
-          title: "Calendar",
-          date: `FRIDAY, ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }).toUpperCase()}`,
-          detail: userTextSummary(activeSession.editedText),
-          status: "Scheduled",
-        });
       }
     }
   }, [activeSession]);
-
-  const userTextSummary = (txt: string) => {
-    if (!txt) return "Voice Update Logged";
-    if (txt.length > 28) return txt.slice(0, 26) + "...";
-    return txt;
-  };
 
   const handleSendInput = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,13 +172,6 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
         setMessages((prev) => [...prev, aiMsg]);
-        setToast({
-          icon: "📅",
-          title: "Calendar",
-          date: `FRIDAY, ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }).toUpperCase()}`,
-          detail: userText,
-          status: "Scheduled",
-        });
       }
     } else {
       setTimeout(() => {
@@ -213,13 +183,6 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
         setMessages((prev) => [...prev, aiMsg]);
-        setToast({
-          icon: "📅",
-          title: "Calendar",
-          date: `FRIDAY, ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }).toUpperCase()}`,
-          detail: userText,
-          status: "Scheduled",
-        });
       }, 700);
     }
   };
@@ -262,26 +225,6 @@ export const VoicePhoneView: React.FC<VoicePhoneViewProps> = ({
           </div>
         </div>
 
-        {/* Floating Notification Toast Card (Screen 2: Calendar / Scheduled event) */}
-        {toast && (
-          <div className="action-toast-card">
-            <div className="toast-header">
-              <div className="toast-title-row">
-                <span className="toast-icon">{toast.icon}</span>
-                <span className="toast-title">{toast.title}</span>
-              </div>
-              <button className="toast-close" onClick={() => setToast(null)}>✕</button>
-            </div>
-            <div className="toast-date">{toast.date}</div>
-            <div className="toast-detail-box">
-              <span className="toast-detail-text">{toast.detail}</span>
-              <span className="toast-time">5:00 PM<br/>11:59 PM</span>
-            </div>
-            <div className="toast-status">
-              <span className="green-check">✓</span> {toast.status}
-            </div>
-          </div>
-        )}
 
         {/* Quick Drawer / Navigation inside the phone */}
         {showNavDrawer && (

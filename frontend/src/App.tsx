@@ -1,7 +1,13 @@
 import { VoiceDesktopView } from "./components/VoiceDesktopView";
+import { RoutineBuilder } from "./components/RoutineBuilder/RoutineBuilder";
 import { CreateTaskModal } from "./components/CreateTaskModal";
+import { EditTaskModal } from "./components/EditTaskModal";
+import { EditMemoryModal, type MemoryItemData } from "./components/EditMemoryModal";
+import { TinaMemoryModal } from "./components/TinaMemoryModal";
+import { MobileSyncModal } from "./components/MobileSyncModal";
+import { MobileExpandableNav } from "./components/MobileExpandableNav";
 import type { NavItem } from "./components/RollingDialNav";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -281,17 +287,32 @@ const NAV_ITEMS: NavItem[] = [
     ),
     desc: "Personal Memory Vault",
   },
+  {
+    id: "routines",
+    label: "Routines",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="6" height="6" rx="1" />
+        <rect x="15" y="3" width="6" height="6" rx="1" />
+        <rect x="9" y="15" width="6" height="6" rx="1" />
+        <path d="M6 9v3a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V9" />
+        <path d="M12 13v2" />
+      </svg>
+    ),
+    desc: "Visual Routine Workflows",
+  },
 ];
 
 export function App() {
   const [activeTab, setActiveTab] = useState<
-    "voice" | "myday" | "lifetree" | "research" | "trackers" | "memory"
+    "voice" | "myday" | "lifetree" | "research" | "trackers" | "memory" | "routines"
   >("voice");
   const switchTab = (tabId: string) => {
     setActiveTab(tabId as any);
     if (typeof window !== "undefined" && window.innerWidth <= 768) {
       setIsSidebarOpen(false);
     }
+    loadSessions();
     if (tabId === "myday") loadMyDay();
     if (tabId === "lifetree") loadLifeTree();
     if (tabId === "research") loadDocuments();
@@ -322,6 +343,34 @@ export function App() {
   const [dueTasks, setDueTasks] = useState<DueTask[]>([]);
   const [nextAction, setNextAction] = useState<NextAction | null>(null);
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<DueTask | null>(null);
+  const [isEditTaskModalOpen, setIsEditTaskModalOpen] = useState(false);
+  const [editingMemory, setEditingMemory] = useState<MemoryItemData | null>(null);
+  const [isEditMemoryModalOpen, setIsEditMemoryModalOpen] = useState(false);
+  const [isTinaMemoryModalOpen, setIsTinaMemoryModalOpen] = useState(false);
+  const [isMobileSyncModalOpen, setIsMobileSyncModalOpen] = useState(false);
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState<any>(null);
+
+  // Listen for PWA install prompt (Android Chrome & Desktop)
+  useEffect(() => {
+    const handleBeforeInstall = (e: any) => {
+      e.preventDefault();
+      setDeferredInstallPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+  }, []);
+
+  const handleInstallPWA = () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      deferredInstallPrompt.userChoice.then((choiceResult: any) => {
+        if (choiceResult.outcome === "accepted") {
+          setDeferredInstallPrompt(null);
+        }
+      });
+    }
+  };
 
   // Life Tree states
   const [lifeTree, setLifeTree] = useState<LifeTreeNode[]>([]);
@@ -440,6 +489,11 @@ export function App() {
     }
   };
 
+  const openTinaMemoryModal = () => {
+    loadMemoryData();
+    setIsTinaMemoryModalOpen(true);
+  };
+
   const loadAnalytics = async () => {
     try {
       const [resW, resG, resR] = await Promise.all([
@@ -455,17 +509,52 @@ export function App() {
     }
   };
 
-  useEffect(() => {
-    checkStatus();
-    loadSessions();
-    loadMyDay();
-    loadLifeTree();
-    loadDocuments();
-    loadMemoryData();
-    loadAnalytics();
-    const interval = setInterval(checkStatus, 15000);
-    return () => clearInterval(interval);
+  const refreshAllData = useCallback(async () => {
+    try {
+      await Promise.allSettled([
+        checkStatus(),
+        loadSessions(),
+        loadMyDay(),
+        loadLifeTree(),
+        loadDocuments(),
+        loadMemoryData(),
+        loadAnalytics(),
+      ]);
+    } catch (e) {
+      console.warn("Background auto-sync error:", e);
+    }
   }, []);
+
+  useEffect(() => {
+    // 1. Initial immediate sync
+    refreshAllData();
+
+    // 2. Fast retry after 2.5s (handles initial network connection handshake)
+    const retryTimer = setTimeout(refreshAllData, 2500);
+
+    // 3. Continuous auto-sync every 6s so Mac, PC, and Mobile stay in lockstep
+    const syncInterval = setInterval(refreshAllData, 6000);
+
+    // 4. Instant sync on visibility change (when unlocking phone or switching back to app)
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refreshAllData();
+      }
+    };
+    const handleFocus = () => {
+      refreshAllData();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      clearTimeout(retryTimer);
+      clearInterval(syncInterval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [refreshAllData]);
 
   // Voice recording handlers
   const startRecording = async () => {
@@ -669,6 +758,64 @@ export function App() {
     }
   };
 
+  // Delete task
+  const handleDeleteTask = async (taskId: number, taskTitle: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to delete task "${taskTitle}"?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`${BACKEND_BASE}/api/tasks/${taskId}?delete_rule=true`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setDueTasks((prev) => prev.filter((t) => t.id !== taskId));
+        loadLifeTree();
+        loadMyDay();
+      }
+    } catch (err) {
+      console.error("Failed to delete task:", err);
+    }
+  };
+
+  // Delete routine
+  const handleDeleteRoutine = async (routineId: number, routineName: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to delete routine "${routineName}"?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`${BACKEND_BASE}/api/routines/${routineId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        loadLifeTree();
+        loadMyDay();
+      }
+    } catch (err) {
+      console.error("Failed to delete routine:", err);
+    }
+  };
+
+  // Delete memory item
+  const handleDeleteMemory = async (type: "daily_log" | "activity" | "measurement" | "fact", id: number, label: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to delete this memory entry (${label})?`)) return;
+    let endpoint = "";
+    if (type === "daily_log") endpoint = `${BACKEND_BASE}/api/memory/daily-logs/${id}`;
+    else if (type === "activity") endpoint = `${BACKEND_BASE}/api/memory/activities/${id}`;
+    else if (type === "measurement") endpoint = `${BACKEND_BASE}/api/memory/measurements/${id}`;
+    else if (type === "fact") endpoint = `${BACKEND_BASE}/api/memory/facts/${id}`;
+    try {
+      const res = await fetch(endpoint, { method: "DELETE" });
+      if (res.ok) {
+        await loadMemoryData();
+      }
+    } catch (err) {
+      console.error("Failed to delete memory:", err);
+    }
+  };
+
   // Document upload handler
   const handleCreateDocument = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -840,6 +987,7 @@ export function App() {
   );
   const [showFullOrbView, setShowFullOrbView] = useState(false);
   const [bottomInputText, setBottomInputText] = useState("");
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [recentActiveId, setRecentActiveId] = useState("");
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const chatScrollAnchorRef = useRef<HTMLDivElement>(null);
@@ -939,6 +1087,7 @@ export function App() {
       <aside className={`chatgpt-sidebar ${isSidebarOpen ? "" : "collapsed"}`}>
         <div className="sidebar-top-bar">
           <div className="sidebar-brand-title">
+            <img src="/app-logo.png" alt="Tina Logo" className="sidebar-brand-logo" />
             <span>Tina</span>
           </div>
           <div className="sidebar-top-actions">
@@ -994,8 +1143,21 @@ export function App() {
           ))}
         </div>
 
-        <div className="sidebar-section-header" style={{ marginTop: "12px" }}>
+        <div className="sidebar-section-header" style={{ marginTop: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span>Recents</span>
+          <button
+            type="button"
+            className="sidebar-sync-icon-btn"
+            title="Sync all data now"
+            onClick={(e) => {
+              e.stopPropagation();
+              refreshAllData();
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+          </button>
         </div>
         <div className="sidebar-recents-list">
           {sessions.length === 0 && (
@@ -1089,11 +1251,61 @@ export function App() {
               </button>
             )}
             <div className="top-bar-title">
-              <span>Tina</span>
+              {!isSidebarOpen && (
+                <img src="/app-logo.png" alt="Tina Logo" className="top-bar-logo-img" />
+              )}
+              <span>
+                {isSidebarOpen
+                  ? (NAV_ITEMS.find((item) => item.id === activeTab)?.label || "Tina")
+                  : "Tina"}
+              </span>
+              <span className="top-bar-model-chip" title={ollamaOnline ? "Ollama Local Engine Online" : "Ollama Engine Offline"}>
+                <span className={`status-dot ${ollamaOnline ? "" : "offline"}`} />
+                llama3.1:8b
+              </span>
             </div>
           </div>
 
           <div className="top-bar-right">
+            {deferredInstallPrompt && (
+              <button
+                className="top-bar-install-btn"
+                onClick={handleInstallPWA}
+                title="Install Tina as an App on your phone"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span>Install App</span>
+              </button>
+            )}
+
+            <button
+              className="top-bar-mobile-btn"
+              onClick={() => setIsMobileSyncModalOpen(true)}
+              title="Connect Mobile App / QR Code"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="5" y="2" width="14" height="20" rx="3" ry="3" />
+                <line x1="12" y1="18" x2="12.01" y2="18" strokeWidth="3" />
+              </svg>
+              <span>Mobile Sync</span>
+            </button>
+
+            <button
+              className="top-bar-memory-btn"
+              onClick={openTinaMemoryModal}
+              title="View & Edit Tina's Memory Bank"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z" />
+                <line x1="9" y1="21" x2="15" y2="21" />
+              </svg>
+              <span>Tina's Memory</span>
+            </button>
+
             <button
               className="top-bar-add-task-btn"
               onClick={() => setIsCreateTaskModalOpen(true)}
@@ -1108,7 +1320,7 @@ export function App() {
           </div>
         </header>
 
-        <div className="chatgpt-canvas-body">
+        <div className={`chatgpt-canvas-body ${activeTab === "routines" ? "full-bleed-workspace" : ""}`}>
           {/* VIEW 1: Voice & ChatGPT Conversation Canvas */}
           {activeTab === "voice" && (
             <div className="chat-conversation-stream">
@@ -1186,18 +1398,17 @@ export function App() {
                     </button>
                     <button
                       className="welcome-suggestion-card"
-                      onClick={() => handleSendQueryToAI("Summarize my recent memory logs and facts.")}
+                      onClick={openTinaMemoryModal}
                     >
                       <span className="card-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                          <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                          <line x1="12" y1="22.08" x2="12" y2="12" />
+                          <path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z" />
+                          <line x1="9" y1="21" x2="15" y2="21" />
                         </svg>
                       </span>
                       <div>
-                        <div className="card-headline">Review Memory</div>
-                        <div className="card-desc">Search personal timeline and facts</div>
+                        <div className="card-headline">Tina's Memory</div>
+                        <div className="card-desc">View and edit what Tina remembers about you</div>
                       </div>
                     </button>
                     <button
@@ -1279,6 +1490,16 @@ export function App() {
                             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
                           </svg>
                         </button>
+                        <button
+                          className="action-tool-btn"
+                          title="View & Edit Tina's Memory"
+                          onClick={openTinaMemoryModal}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z" />
+                            <line x1="9" y1="21" x2="15" y2="21" />
+                          </svg>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -1344,6 +1565,34 @@ export function App() {
                       <span className="cluster-tag">{t.cluster}</span>
                       {t.duration_minutes && <span>{t.duration_minutes} min</span>}
                     </div>
+                  </div>
+                  <div className="task-actions">
+                    <button
+                      type="button"
+                      className="task-action-btn edit-btn"
+                      title="Edit task"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingTask(t);
+                        setIsEditTaskModalOpen(true);
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className="task-action-btn delete-btn"
+                      title="Delete task"
+                      onClick={(e) => handleDeleteTask(t.id, t.title, e)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               ))
@@ -1413,9 +1662,22 @@ export function App() {
                               Schedule: {r.schedule_type} {r.duration_minutes ? `• ${r.duration_minutes} min` : ""}
                             </div>
                           </div>
-                          <span className="badge" style={{ color: r.enabled ? "#10b981" : "#94a3b8" }}>
-                            {r.enabled ? "Active" : "Paused"}
-                          </span>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span className="badge" style={{ color: r.enabled ? "#10b981" : "#94a3b8" }}>
+                              {r.enabled ? "Active" : "Paused"}
+                            </span>
+                            <button
+                              type="button"
+                              className="task-action-btn delete-btn"
+                              title="Delete routine"
+                              onClick={(e) => handleDeleteRoutine(r.id, r.name, e)}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                       ))
                     )}
@@ -1693,62 +1955,212 @@ export function App() {
           )}
 
           <div className="memory-grid">
+            {/* 1. Daily Logs */}
             <div className="memory-card">
-              <div className="card-title">Daily Logs</div>
+              <div className="memory-card-header">
+                <div className="card-title">Daily Logs</div>
+                <button
+                  type="button"
+                  className="btn-add-memory-inline"
+                  onClick={() => {
+                    setEditingMemory({ type: "daily_log" });
+                    setIsEditMemoryModalOpen(true);
+                  }}
+                >
+                  + Add Log
+                </button>
+              </div>
               {dailyLogs.length === 0 ? (
                 <div className="empty-text">No daily logs extracted yet.</div>
               ) : (
                 <div className="memory-list">
                   {dailyLogs.map((log) => (
                     <div key={log.id} className="memory-row">
-                      <div className="row-date">{log.log_date}</div>
-                      <div className="row-text">{log.summary}</div>
+                      <div className="memory-row-content">
+                        <div className="row-date">{log.log_date}</div>
+                        <div className="row-text">{log.summary}</div>
+                      </div>
+                      <div className="memory-row-actions">
+                        <button
+                          type="button"
+                          className="task-action-btn edit-btn"
+                          title="Alter log"
+                          onClick={() => {
+                            setEditingMemory({
+                              type: "daily_log",
+                              id: log.id,
+                              log_date: log.log_date,
+                              summary: log.summary,
+                            });
+                            setIsEditMemoryModalOpen(true);
+                          }}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="task-action-btn delete-btn"
+                          title="Delete log"
+                          onClick={(e) => handleDeleteMemory("daily_log", log.id, log.log_date, e)}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
+            {/* 2. Tracked Measurements */}
             <div className="memory-card">
-              <div className="card-title">Tracked Measurements</div>
+              <div className="memory-card-header">
+                <div className="card-title">Tracked Measurements</div>
+                <button
+                  type="button"
+                  className="btn-add-memory-inline"
+                  onClick={() => {
+                    setEditingMemory({ type: "measurement" });
+                    setIsEditMemoryModalOpen(true);
+                  }}
+                >
+                  + Add Metric
+                </button>
+              </div>
               {measurements.length === 0 ? (
                 <div className="empty-text">No measurements recorded yet.</div>
               ) : (
                 <div className="memory-list">
                   {measurements.map((m) => (
                     <div key={m.id} className="memory-row measurement-row">
-                      <div>
-                        <strong>{m.metric}:</strong> {m.value} {m.unit}
-                        <span className={`status-pill ${m.review_status}`}>{m.review_status}</span>
+                      <div className="memory-row-content">
+                        <div>
+                          <strong>{m.metric}:</strong> {m.value} {m.unit}
+                          <span className={`status-pill ${m.review_status}`}>{m.review_status}</span>
+                        </div>
+                        <div className="row-date" style={{ marginTop: "4px" }}>{m.measurement_date}</div>
                       </div>
-                      {m.review_status === "uncertain" && (
+                      <div className="memory-row-actions">
+                        {m.review_status === "uncertain" && (
+                          <button
+                            type="button"
+                            className="btn-confirm-small"
+                            onClick={() => handleConfirmMeasurement(m.id)}
+                          >
+                            Confirm
+                          </button>
+                        )}
                         <button
-                          className="btn-confirm-small"
-                          onClick={() => handleConfirmMeasurement(m.id)}
+                          type="button"
+                          className="task-action-btn edit-btn"
+                          title="Alter measurement"
+                          onClick={() => {
+                            setEditingMemory({
+                              type: "measurement",
+                              id: m.id,
+                              metric: m.metric,
+                              value: m.value,
+                              unit: m.unit,
+                              measurement_date: m.measurement_date,
+                              review_status: m.review_status,
+                              notes: m.notes,
+                            });
+                            setIsEditMemoryModalOpen(true);
+                          }}
                         >
-                          Confirm
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                          </svg>
                         </button>
-                      )}
+                        <button
+                          type="button"
+                          className="task-action-btn delete-btn"
+                          title="Delete measurement"
+                          onClick={(e) => handleDeleteMemory("measurement", m.id, `${m.metric}: ${m.value}${m.unit}`, e)}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
+            {/* 3. Activities & Habits */}
             <div className="memory-card">
-              <div className="card-title">Activities & Habits</div>
+              <div className="memory-card-header">
+                <div className="card-title">Activities & Habits</div>
+                <button
+                  type="button"
+                  className="btn-add-memory-inline"
+                  onClick={() => {
+                    setEditingMemory({ type: "activity" });
+                    setIsEditMemoryModalOpen(true);
+                  }}
+                >
+                  + Add Activity
+                </button>
+              </div>
               {activities.length === 0 ? (
                 <div className="empty-text">No activities logged yet.</div>
               ) : (
                 <div className="memory-list">
                   {activities.map((a) => (
                     <div key={a.id} className="memory-row">
-                      <div>
-                        <strong>{a.name}</strong>{" "}
-                        <span className="category-pill">{a.category}</span>
+                      <div className="memory-row-content">
+                        <div>
+                          <strong>{a.name}</strong>{" "}
+                          <span className="category-pill">{a.category}</span>
+                        </div>
+                        <div className="row-sub">
+                          {a.duration_minutes ? `${a.duration_minutes} min • ` : ""}{a.activity_date}
+                        </div>
                       </div>
-                      <div className="row-sub">
-                        {a.duration_minutes ? `${a.duration_minutes} min • ` : ""}{a.activity_date}
+                      <div className="memory-row-actions">
+                        <button
+                          type="button"
+                          className="task-action-btn edit-btn"
+                          title="Alter activity"
+                          onClick={() => {
+                            setEditingMemory({
+                              type: "activity",
+                              id: a.id,
+                              name: a.name,
+                              category: a.category,
+                              duration_minutes: a.duration_minutes,
+                              activity_date: a.activity_date,
+                              notes: a.notes,
+                            });
+                            setIsEditMemoryModalOpen(true);
+                          }}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="task-action-btn delete-btn"
+                          title="Delete activity"
+                          onClick={(e) => handleDeleteMemory("activity", a.id, a.name, e)}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -1756,18 +2168,66 @@ export function App() {
               )}
             </div>
 
+            {/* 4. Facts, Decisions & Goals */}
             <div className="memory-card">
-              <div className="card-title">Facts, Decisions & Goals</div>
+              <div className="memory-card-header">
+                <div className="card-title">Facts, Decisions & Goals</div>
+                <button
+                  type="button"
+                  className="btn-add-memory-inline"
+                  onClick={() => {
+                    setEditingMemory({ type: "fact" });
+                    setIsEditMemoryModalOpen(true);
+                  }}
+                >
+                  + Add Fact
+                </button>
+              </div>
               {facts.length === 0 ? (
                 <div className="empty-text">No facts or goals recorded yet.</div>
               ) : (
                 <div className="memory-list">
                   {facts.map((f) => (
                     <div key={f.id} className="memory-row">
-                      <div>
-                        <strong>{f.key}:</strong> {f.value}
+                      <div className="memory-row-content">
+                        <div>
+                          <strong>{f.key}:</strong> {f.value}
+                        </div>
+                        <div className="row-sub">{f.category}</div>
                       </div>
-                      <div className="row-sub">{f.category}</div>
+                      <div className="memory-row-actions">
+                        <button
+                          type="button"
+                          className="task-action-btn edit-btn"
+                          title="Alter fact"
+                          onClick={() => {
+                            setEditingMemory({
+                              type: "fact",
+                              id: f.id,
+                              category: f.category,
+                              key: f.key,
+                              summary: f.value,
+                            });
+                            setIsEditMemoryModalOpen(true);
+                          }}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="task-action-btn delete-btn"
+                          title="Delete fact"
+                          onClick={(e) => handleDeleteMemory("fact", f.id, f.key, e)}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1776,10 +2236,18 @@ export function App() {
           </div>
         </section>
       )}
+
+      {/* VIEW: Routine Builder & Connected Workflows */}
+      {activeTab === "routines" && (
+        <RoutineBuilder backendBaseUrl={BACKEND_BASE} />
+      )}
         </div>
 
-        {/* Sticky Bottom Floating Bar (ChatGPT Style) */}
-        <footer className="chatgpt-bottom-floating-bar">
+        {/* Sticky Bottom Floating Bar (ChatGPT Style & Mobile Reference Static Pill) */}
+        <footer
+          className="chatgpt-bottom-floating-bar"
+          style={isMobileNavOpen || activeTab === "routines" ? { display: "none" } : undefined}
+        >
           <form
             className="floating-input-capsule"
             onSubmit={(e) => {
@@ -1798,7 +2266,7 @@ export function App() {
             <input
               type="text"
               className="capsule-text-input"
-              placeholder="Message Tina..."
+              placeholder="Ask anything..."
               value={bottomInputText}
               onChange={(e) => setBottomInputText(e.target.value)}
               disabled={isProcessing}
@@ -1815,14 +2283,16 @@ export function App() {
                   <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
                 </svg>
               </button>
-              <button
-                type="submit"
-                className="capsule-send-btn"
-                title="Send message"
-                disabled={!bottomInputText.trim() || isProcessing}
-              >
-                ↑
-              </button>
+              {bottomInputText.trim() && (
+                <button
+                  type="submit"
+                  className="capsule-send-btn"
+                  title="Send message"
+                  disabled={!bottomInputText.trim() || isProcessing}
+                >
+                  ↑
+                </button>
+              )}
             </div>
           </form>
 
@@ -1831,19 +2301,14 @@ export function App() {
           </div>
         </footer>
 
-        {/* Mobile Bottom Navigation Bar (iOS / Native Mobile Style) */}
-        <nav className="mobile-bottom-nav">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              className={`mobile-nav-btn ${activeTab === item.id ? "active" : ""}`}
-              onClick={() => switchTab(item.id)}
-            >
-              <span className="mobile-nav-icon">{item.icon}</span>
-              <span className="mobile-nav-label">{item.label}</span>
-            </button>
-          ))}
-        </nav>
+        {/* Mobile-Only Semi-Circle Arc Navigation */}
+        <MobileExpandableNav
+          activeTab={activeTab}
+          onSelectTab={switchTab}
+          items={NAV_ITEMS}
+          onOpenSettings={() => setIsMobileSyncModalOpen(true)}
+          onOpenChange={setIsMobileNavOpen}
+        />
 
         {copyFeedback && <div className="copy-toast">{copyFeedback}</div>}
 
@@ -1857,6 +2322,67 @@ export function App() {
             loadLifeTree();
           }}
           backendBaseUrl={BACKEND_BASE}
+        />
+
+        {/* Edit & Delete Task Modal */}
+        <EditTaskModal
+          isOpen={isEditTaskModalOpen}
+          onClose={() => {
+            setIsEditTaskModalOpen(false);
+            setEditingTask(null);
+          }}
+          task={editingTask}
+          clusters={lifeTree.map((c) => ({ id: c.id, name: c.name }))}
+          onTaskUpdated={() => {
+            loadMyDay();
+            loadLifeTree();
+          }}
+          onTaskDeleted={() => {
+            loadMyDay();
+            loadLifeTree();
+          }}
+          backendBaseUrl={BACKEND_BASE}
+        />
+
+        {/* Edit & Alter Memory Modal */}
+        <EditMemoryModal
+          isOpen={isEditMemoryModalOpen}
+          onClose={() => {
+            setIsEditMemoryModalOpen(false);
+            setEditingMemory(null);
+          }}
+          item={editingMemory}
+          onSaved={() => {
+            loadMemoryData();
+            loadAnalytics();
+          }}
+          onDeleted={() => {
+            loadMemoryData();
+            loadAnalytics();
+          }}
+          backendBaseUrl={BACKEND_BASE}
+        />
+
+        {/* Tina's Memory Overview Modal */}
+        <TinaMemoryModal
+          isOpen={isTinaMemoryModalOpen}
+          onClose={() => setIsTinaMemoryModalOpen(false)}
+          dailyLogs={dailyLogs}
+          measurements={measurements}
+          activities={activities}
+          facts={facts}
+          onOpenEditModal={(item) => {
+            setEditingMemory(item);
+            setIsEditMemoryModalOpen(true);
+          }}
+          onDeleteMemory={handleDeleteMemory}
+          onNavigateToVault={() => switchTab("memory")}
+        />
+
+        {/* Mobile PWA & QR Code Connect Modal */}
+        <MobileSyncModal
+          isOpen={isMobileSyncModalOpen}
+          onClose={() => setIsMobileSyncModalOpen(false)}
         />
       </main>
     </div>

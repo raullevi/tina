@@ -1,0 +1,411 @@
+/* ==========================================================================
+   SKIM — Mobile Semi-Circle Arc / Dome Navigation
+   Based on user reference: Semi-circle arched carousel with thumb rotation
+   ========================================================================== */
+
+/* Hidden on Desktop & Tablet (Mobile Only <= 768px) */
+.mobile-expandable-nav-root {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-expandable-nav-root {
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Backdrop Dimming */
+  .mobile-arc-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 2, 9, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 90;
+    pointer-events: auto;
+    animation: arcBackdropFade 0.25s ease-out;
+  }
+
+  @keyframes arcBackdropFade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* -------------------------------------------------------------------------
+     1. Static Bottom Navigation Dock (matches user reference image)
+     ------------------------------------------------------------------------- */
+  .mobile-static-nav-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(62px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: rgba(14, 10, 24, 0.88);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding-left: 20px;
+    padding-right: 20px;
+    z-index: 70;
+    pointer-events: auto;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .static-nav-btn {
+    background: transparent;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .static-nav-btn:active {
+    transform: scale(0.9);
+  }
+
+  .static-nav-btn.active {
+    color: #c084fc;
+    background: rgba(192, 132, 252, 0.12);
+  }
+
+  /* Center trigger zone (Upward Caret + 3D Cube + Radiant Aura) */
+  .static-nav-center-zone {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0 16px;
+    height: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .static-center-caret {
+    color: #9ca3af;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, color 0.2s ease;
+    animation: caretBob 2s infinite ease-in-out;
+  }
+
+  @keyframes caretBob {
+    0%, 100% {
+      transform: translateY(0);
+      opacity: 0.7;
+    }
+    50% {
+      transform: translateY(-2.5px);
+      opacity: 1;
+      color: #c084fc;
+    }
+  }
+
+  .static-cube-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .static-nav-center-zone:active .static-cube-wrapper {
+    transform: scale(1.12);
+  }
+
+  /* Radiant cyan & purple light pool beneath the cube, matching screenshot */
+  .static-cube-light-pool {
+    position: absolute;
+    width: 68px;
+    height: 28px;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.6) 0%, rgba(168, 85, 247, 0.45) 45%, transparent 75%);
+    filter: blur(8px);
+    pointer-events: none;
+    animation: poolBreathe 3s infinite ease-in-out;
+  }
+
+  @keyframes poolBreathe {
+    0%, 100% {
+      opacity: 0.75;
+      transform: translateX(-50%) scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: translateX(-50%) scale(1.2);
+    }
+  }
+
+  /* -------------------------------------------------------------------------
+     2. Expanded Semi-Circle Dome / Arch Modal
+     ------------------------------------------------------------------------- */
+  .mobile-arc-dome {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    pointer-events: auto;
+    z-index: 100;
+    height: calc(260px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: linear-gradient(180deg, rgba(14, 9, 28, 0.96) 0%, rgba(6, 4, 13, 0.99) 100%);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    /* Arched curved dome top */
+    border-top-left-radius: 50% 50px;
+    border-top-right-radius: 50% 50px;
+    border-top: 1.5px solid rgba(192, 132, 252, 0.4);
+    box-shadow: 0 -12px 40px rgba(168, 85, 247, 0.22), 0 24px 60px rgba(0, 0, 0, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+    animation: domeSlideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: pan-y;
+  }
+
+  @keyframes domeSlideUp {
+    from {
+      opacity: 0.6;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Small Arch Indicator / Handle at Top of Dome */
+  .dome-handle-pip {
+    width: 32px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(192, 132, 252, 0.35);
+    margin-top: 8px;
+    margin-bottom: 4px;
+  }
+
+  /* Header Label ("SMART AI" centered above the arch) */
+  .dome-header-row {
+    margin-top: 2px;
+    margin-bottom: 2px;
+    text-align: center;
+  }
+
+  .dome-header-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #d8b4fe;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(192, 132, 252, 0.4);
+  }
+
+  /* -------------------------------------------------------------------------
+     3. Radial Semi-Circle Track / Stage for Icons
+     ------------------------------------------------------------------------- */
+  .dome-arc-track {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+    height: 125px;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none; /* Capture thumb swipe horizontally */
+  }
+
+  /* Semi-circle subtle guide curve */
+  .dome-guide-curve {
+    position: absolute;
+    width: 290px;
+    height: 140px;
+    border-top: 1px dashed rgba(192, 132, 252, 0.15);
+    border-top-left-radius: 145px;
+    border-top-right-radius: 145px;
+    top: 28px;
+    pointer-events: none;
+  }
+
+  /* Individual Dial Item Positioned along Semi-Circle Arch */
+  .dome-arc-item {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.22s ease,
+                filter 0.22s ease;
+    will-change: transform, opacity;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .dome-arc-item.dragging {
+    transition: none; /* Instant response to thumb touch move */
+  }
+
+  /* Center Active Glowing 3D Crystal Cube (as shown in reference image) */
+  .dome-crystal-cube {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.7))
+            drop-shadow(0 0 22px rgba(192, 132, 252, 0.65));
+    animation: crystalFloat 3s infinite ease-in-out;
+  }
+
+  .dome-3d-cube-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+  }
+
+  @keyframes crystalFloat {
+    0%, 100% {
+      transform: translateY(0) scale(1);
+    }
+    50% {
+      transform: translateY(-3px) scale(1.03);
+    }
+  }
+
+  /* Regular / Flanking Icon on Arc */
+  .dome-flank-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(192, 132, 252, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9d8eb5;
+    transition: all 0.2s ease;
+  }
+
+  .dome-flank-icon svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 1.8;
+  }
+
+  .dome-arc-item:active .dome-flank-icon {
+    transform: scale(0.92);
+    border-color: #c084fc;
+    color: #f3e8ff;
+  }
+
+  /* Item Title Label under Icon */
+  .dome-item-caption {
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: #9d8eb5;
+    margin-top: 4px;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    transition: color 0.18s ease;
+  }
+
+  .dome-arc-item.active .dome-item-caption {
+    color: #f3e8ff;
+    font-weight: 700;
+  }
+
+  /* -------------------------------------------------------------------------
+     4. Bottom Row of the Dome: Settings Pill & Corner Shortcuts
+     ------------------------------------------------------------------------- */
+  .dome-bottom-controls {
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 20px 10px;
+    margin-top: auto;
+  }
+
+  /* Corner Icon Buttons */
+  .dome-corner-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #8b7d9e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .dome-corner-btn:active {
+    transform: scale(0.92);
+    color: #ffffff;
+    background: rgba(168, 85, 247, 0.2);
+  }
+
+  .dome-corner-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Center "Settings" Pill (matches reference image) */
+  .dome-settings-pill {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(192, 132, 252, 0.25);
+    color: #e9d5ff;
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 6px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .dome-settings-pill:active {
+    transform: scale(0.94);
+    background: rgba(168, 85, 247, 0.25);
+    border-color: #c084fc;
+    color: #ffffff;
+  }
+}

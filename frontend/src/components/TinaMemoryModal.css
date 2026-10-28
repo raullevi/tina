@@ -1,0 +1,411 @@
+/* Tina's Memory Bank Modal Styles */
+.tina-memory-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeInMemModal 0.15s ease-out;
+}
+
+.tina-memory-card {
+  background: #0f0c19;
+  border: 1px solid rgba(184, 150, 230, 0.28);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 85vh;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.85), 0 0 40px rgba(184, 150, 230, 0.12);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tina-memory-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(26, 17, 43, 0.5);
+}
+
+.tina-memory-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tina-memory-orb-icon {
+  font-size: 1.6rem;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(184, 150, 230, 0.15);
+  border: 1px solid rgba(184, 150, 230, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 16px rgba(184, 150, 230, 0.25);
+}
+
+.tina-memory-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.tina-memory-subtitle {
+  margin: 3px 0 0;
+  font-size: 0.82rem;
+  color: #a79bb5;
+}
+
+.tina-memory-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-add-memory-primary {
+  background: #b896e6;
+  color: #1a0933;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(184, 150, 230, 0.3);
+}
+
+.btn-add-memory-primary:hover {
+  background: #c8a8f4;
+  transform: translateY(-1px);
+}
+
+.tina-memory-close-btn {
+  background: transparent;
+  border: none;
+  color: #a79bb5;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.tina-memory-close-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Toolbar & Filters */
+.tina-memory-toolbar {
+  padding: 14px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(13, 9, 23, 0.4);
+}
+
+.tina-memory-pills {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.pill-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(184, 150, 230, 0.15);
+  color: #a79bb5;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.pill-btn:hover {
+  background: rgba(184, 150, 230, 0.15);
+  color: #ffffff;
+}
+
+.pill-btn.active {
+  background: rgba(184, 150, 230, 0.25);
+  border-color: #b896e6;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.tina-memory-search-input {
+  width: 100%;
+  background: #141022;
+  border: 1px solid rgba(184, 150, 230, 0.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #ffffff;
+  font-size: 0.88rem;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.tina-memory-search-input:focus {
+  border-color: #b896e6;
+}
+
+/* Scroll Body */
+.tina-memory-scroll-body {
+  padding: 18px 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tina-mem-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tina-mem-section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #b896e6;
+}
+
+.tina-mem-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tina-mem-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #141022;
+  border: 1px solid rgba(184, 150, 230, 0.12);
+  border-radius: 10px;
+  gap: 12px;
+  transition: all 0.15s ease;
+}
+
+.tina-mem-item-row:hover {
+  border-color: rgba(184, 150, 230, 0.28);
+  background: #1a152e;
+}
+
+.tina-mem-item-content {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.88rem;
+  color: #ede9fe;
+  line-height: 1.4;
+}
+
+.mem-category-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(184, 150, 230, 0.18);
+  color: #d1b8e8;
+  margin-right: 8px;
+}
+
+.mem-item-key {
+  color: #ffffff;
+}
+
+.mem-item-val {
+  color: #ddd6fe;
+}
+
+.mem-item-date {
+  font-size: 0.74rem;
+  color: #7d6e8c;
+  margin-top: 3px;
+}
+
+.mem-item-summary {
+  color: #ede9fe;
+}
+
+.tina-mem-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.mem-action-btn {
+  background: transparent;
+  border: none;
+  color: #7d6e8c;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.mem-action-btn.edit:hover {
+  color: #c084fc;
+  background: rgba(192, 132, 252, 0.15);
+}
+
+.mem-action-btn.delete:hover {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.tina-mem-empty {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.empty-icon {
+  font-size: 2.2rem;
+  margin-bottom: 10px;
+}
+
+.empty-text {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.empty-sub {
+  font-size: 0.82rem;
+  color: #a79bb5;
+  margin-top: 4px;
+}
+
+/* Footer */
+.tina-memory-footer {
+  padding: 14px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(13, 9, 23, 0.5);
+}
+
+.btn-vault-link {
+  background: transparent;
+  border: none;
+  color: #b896e6;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.btn-vault-link:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.btn-close-footer {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  padding: 7px 18px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-close-footer:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Mobile Bottom Sheet Adaptation */
+@media (max-width: 640px) {
+  .tina-memory-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .tina-memory-card {
+    max-width: 100%;
+    width: 100%;
+    max-height: 88dvh;
+    border-radius: 22px 22px 0 0;
+    border-bottom: none;
+    animation: slideUpBottomMemBank 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .tina-memory-card::before {
+    content: "";
+    display: block;
+    width: 38px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.22);
+    margin: 10px auto 2px;
+  }
+
+  .tina-memory-header {
+    padding: 14px 18px 12px;
+  }
+
+  .tina-memory-toolbar {
+    padding: 10px 18px;
+  }
+
+  .tina-memory-scroll-body {
+    padding: 14px 18px;
+  }
+
+  .tina-memory-footer {
+    padding: 12px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .tina-memory-search-input {
+    font-size: 16px !important;
+  }
+
+  .mem-action-btn {
+    padding: 8px;
+    width: 34px;
+    height: 34px;
+  }
+}
+
+@keyframes slideUpBottomMemBank {
+  from {
+    transform: translateY(100%);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

@@ -55,14 +55,6 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
   const [selectedLanguage, setSelectedLanguage] = useState("Auto-Detect");
   const [showLangMenu, setShowLangMenu] = useState(false);
 
-  // Notification Toast (Calendar / Action Scheduled banner)
-  const [toast, setToast] = useState<{
-    icon: string;
-    title: string;
-    date: string;
-    detail: string;
-    status: string;
-  } | null>(null);
 
   // Chat messages thread
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -141,23 +133,9 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
         setMessages((prev) => [...prev, replyMsg]);
-
-        setToast({
-          icon: "📅",
-          title: "Calendar",
-          date: `FRIDAY, ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }).toUpperCase()}`,
-          detail: userTextSummary(activeSession.editedText),
-          status: "Scheduled",
-        });
       }
     }
   }, [activeSession]);
-
-  const userTextSummary = (txt: string) => {
-    if (!txt) return "Voice Update Logged";
-    if (txt.length > 35) return txt.slice(0, 32) + "...";
-    return txt;
-  };
 
   const handleSendInput = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,13 +164,6 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
         setMessages((prev) => [...prev, aiMsg]);
-        setToast({
-          icon: "📅",
-          title: "Calendar",
-          date: `FRIDAY, ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }).toUpperCase()}`,
-          detail: userText,
-          status: "Scheduled",
-        });
       }
     }
   };
@@ -212,22 +183,6 @@ export const VoiceDesktopView: React.FC<VoiceDesktopViewProps> = ({
 
   return (
     <div className="pc-voice-container">
-      {/* Toast Notification */}
-      {toast && (
-        <div className="pc-action-toast">
-          <div className="toast-left">
-            <span className="toast-icon">{toast.icon}</span>
-            <div>
-              <div className="toast-title">{toast.title} • {toast.date}</div>
-              <div className="toast-detail">{toast.detail}</div>
-            </div>
-          </div>
-          <div className="toast-right">
-            <span className="toast-status-badge"><span className="green-check">✓</span> {toast.status}</span>
-            <button className="toast-close-btn" onClick={() => setToast(null)}>✕</button>
-          </div>
-        </div>
-      )}
 
       {/* Main Central Hero Stage */}
       <div className="pc-voice-hero">

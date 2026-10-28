@@ -1,0 +1,320 @@
+/* ==========================================================================
+   TINA — Create Routine Modal Stylesheet
+   Dark Glassmorphism & Lavender Theme (#08080B, #0D0D12, #17151E, #A78BFA)
+   ========================================================================== */
+
+.rb-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 2, 9, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: rbModalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes rbModalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.rb-modal-card {
+  background: #0D0D12;
+  border: 1px solid #302D38;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85), 0 0 24px rgba(167, 139, 250, 0.16);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Header */
+.rb-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #302D38;
+  background: #17151E;
+}
+
+.rb-modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rb-modal-icon-orb {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(167, 139, 250, 0.16);
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  box-shadow: 0 0 16px rgba(167, 139, 250, 0.25);
+  flex-shrink: 0;
+}
+
+.rb-modal-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #F5F3FF;
+  letter-spacing: -0.01em;
+}
+
+.rb-modal-subtitle {
+  margin: 2px 0 0;
+  font-size: 0.76rem;
+  color: #9690A3;
+}
+
+.rb-modal-close-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #9690A3;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 0.9rem;
+}
+
+.rb-modal-close-btn:hover {
+  background: #17151E;
+  border-color: #302D38;
+  color: #F5F3FF;
+}
+
+/* Form Body */
+.rb-modal-form {
+  padding: 20px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.rb-modal-error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+.rb-modal-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rb-modal-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #C4B5FD;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rb-req {
+  color: #f87171;
+}
+
+/* Presets */
+.rb-modal-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rb-preset-pill {
+  background: #17151E;
+  border: 1px solid #302D38;
+  color: #9690A3;
+  font-size: 0.74rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rb-preset-pill:hover {
+  border-color: #A78BFA;
+  color: #F5F3FF;
+}
+
+.rb-preset-pill.selected {
+  background: rgba(167, 139, 250, 0.2);
+  border-color: #A78BFA;
+  color: #C4B5FD;
+}
+
+/* Inputs */
+.rb-modal-input,
+.rb-modal-textarea {
+  background: #17151E;
+  border: 1px solid #302D38;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #F5F3FF;
+  font-size: 0.88rem;
+  outline: none;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.rb-modal-input:focus,
+.rb-modal-textarea:focus {
+  border-color: #A78BFA;
+  box-shadow: 0 0 12px rgba(167, 139, 250, 0.25);
+  background: #1b1824;
+}
+
+.rb-modal-input::placeholder,
+.rb-modal-textarea::placeholder {
+  color: #645f70;
+}
+
+/* Recurrence Grid Cards */
+.rb-recurrence-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.rb-recurrence-card {
+  background: #17151E;
+  border: 1px solid #302D38;
+  border-radius: 10px;
+  padding: 12px 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rb-recurrence-card:hover {
+  border-color: rgba(167, 139, 250, 0.4);
+}
+
+.rb-recurrence-card.selected {
+  background: rgba(167, 139, 250, 0.12);
+  border-color: #A78BFA;
+  box-shadow: 0 0 16px rgba(167, 139, 250, 0.18);
+}
+
+.rb-rec-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #F5F3FF;
+}
+
+.rb-recurrence-card.selected .rb-rec-title {
+  color: #C4B5FD;
+}
+
+.rb-rec-desc {
+  font-size: 0.68rem;
+  color: #9690A3;
+  line-height: 1.35;
+}
+
+/* Footer Actions */
+.rb-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #302D38;
+}
+
+.rb-btn-modal-cancel {
+  background: transparent;
+  border: 1px solid #302D38;
+  color: #9690A3;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rb-btn-modal-cancel:hover {
+  background: #17151E;
+  color: #F5F3FF;
+}
+
+.rb-btn-modal-submit {
+  background: #A78BFA;
+  border: 1px solid #A78BFA;
+  color: #08080B;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 8px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  box-shadow: 0 0 14px rgba(167, 139, 250, 0.35);
+}
+
+.rb-btn-modal-submit:hover:not(:disabled) {
+  background: #C4B5FD;
+  border-color: #C4B5FD;
+  box-shadow: 0 0 20px rgba(167, 139, 250, 0.5);
+  transform: translateY(-1px);
+}
+
+.rb-btn-modal-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rb-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(8, 8, 11, 0.3);
+  border-top-color: #08080B;
+  border-radius: 50%;
+  animation: rbSpin 0.7s linear infinite;
+}
+
+@keyframes rbSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 600px) {
+  .rb-recurrence-grid {
+    grid-template-columns: 1fr;
+  }
+}

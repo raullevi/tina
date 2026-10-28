@@ -1,0 +1,329 @@
+/* Edit Task Modal Styling */
+.edit-task-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeInEditModal 0.15s ease-out;
+}
+
+@keyframes fadeInEditModal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.edit-task-card {
+  background: #12101a;
+  border: 1px solid rgba(184, 150, 230, 0.25);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(184, 150, 230, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.edit-task-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.edit-task-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.edit-task-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: #a79bb5;
+}
+
+.edit-task-close-btn {
+  background: transparent;
+  border: none;
+  color: #a79bb5;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.edit-task-close-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.edit-task-error {
+  margin: 16px 24px 0;
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 8px;
+  color: #fca5a5;
+  font-size: 0.85rem;
+}
+
+.edit-task-form {
+  padding: 20px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.edit-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.edit-form-row {
+  display: flex;
+  gap: 14px;
+}
+
+@media (max-width: 500px) {
+  .edit-form-row {
+    flex-direction: column;
+  }
+}
+
+.edit-form-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #d1b8e8;
+}
+
+.edit-form-input,
+.edit-form-select {
+  background: #1a1726;
+  border: 1px solid rgba(184, 150, 230, 0.25);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #ffffff;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.edit-form-input:focus,
+.edit-form-select:focus {
+  border-color: #b896e6;
+  box-shadow: 0 0 0 2px rgba(184, 150, 230, 0.2);
+}
+
+.edit-task-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.edit-actions-left {
+  display: flex;
+  align-items: center;
+}
+
+.edit-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-delete-task {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-delete-task:hover {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ffffff;
+}
+
+.btn-delete-task.confirm {
+  background: #dc2626;
+  border-color: #b91c1c;
+  color: #ffffff;
+  animation: pulseDelete 1s infinite alternate;
+}
+
+@keyframes pulseDelete {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.02);
+  }
+}
+
+.btn-cancel-edit {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #a79bb5;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-cancel-edit:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.btn-save-task {
+  background: #b896e6;
+  color: #1a0933;
+  border: none;
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(184, 150, 230, 0.3);
+}
+
+.btn-save-task:hover:not(:disabled) {
+  background: #c8a8f4;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(184, 150, 230, 0.4);
+}
+
+.btn-save-task:disabled,
+.btn-delete-task:disabled,
+.btn-cancel-edit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Mobile Bottom-Sheet Optimization */
+@media (max-width: 640px) {
+  .edit-task-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .edit-task-card {
+    max-width: 100%;
+    width: 100%;
+    max-height: 88dvh;
+    border-radius: 22px 22px 0 0;
+    border-bottom: none;
+    animation: slideUpBottomTask 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .edit-task-card::before {
+    content: "";
+    display: block;
+    width: 38px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.22);
+    margin: 10px auto 2px;
+  }
+
+  .edit-task-header {
+    padding: 14px 18px 12px;
+  }
+
+  .edit-task-form {
+    padding: 16px 18px calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .edit-form-input,
+  .edit-form-select {
+    font-size: 16px !important;
+    padding: 12px 14px;
+  }
+
+  .edit-task-actions {
+    flex-direction: column-reverse;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .edit-actions-left,
+  .edit-actions-right {
+    width: 100%;
+  }
+
+  .edit-actions-right {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn-delete-task,
+  .btn-cancel-edit,
+  .btn-save-task {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.92rem;
+  }
+
+  .btn-delete-task {
+    width: 100%;
+  }
+
+  .btn-cancel-edit {
+    flex: 1;
+  }
+
+  .btn-save-task {
+    flex: 1.5;
+  }
+}
+
+@keyframes slideUpBottomTask {
+  from {
+    transform: translateY(100%);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
