@@ -21,10 +21,13 @@ export const RoutineBuilder: React.FC<RoutineBuilderProps> = ({ backendBaseUrl }
   const [isCreateRoutineModalOpen, setIsCreateRoutineModalOpen] = useState(false);
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved");
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Auto-save debounce timer
+  // Auto-save debounce timer, active abort controller, and request version token
   const autoSaveTimerRef = useRef<any>(null);
+  const activeAbortControllerRef = useRef<AbortController | null>(null);
+  const requestVersionRef = useRef<number>(0);
 
   // Load all routines
   const loadRoutines = useCallback(async () => {
@@ -99,25 +102,50 @@ export const RoutineBuilder: React.FC<RoutineBuilderProps> = ({ backendBaseUrl }
       )
     );
 
-    // Cancel any pending debounced auto-save
+    // Cancel any pending debounced auto-save timer
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
       autoSaveTimerRef.current = null;
     }
 
+    // If immediate (e.g. stage deletion), abort any currently in-flight request
+    if (immediate && activeAbortControllerRef.current) {
+      activeAbortControllerRef.current.abort();
+      activeAbortControllerRef.current = null;
+    }
+
     const doSave = async () => {
+      // Abort any earlier in-flight save before starting
+      if (activeAbortControllerRef.current) {
+        activeAbortControllerRef.current.abort();
+      }
+      const controller = new AbortController();
+      activeAbortControllerRef.current = controller;
+      const thisVersion = ++requestVersionRef.current;
+
       setSaveStatus("saving");
+      setSaveError(null);
+
       try {
         const res = await fetch(`${backendBaseUrl}/api/routine-workflows/${routineId}/workflow`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({
             stages: stagesToSave,
             connections: connsToSave,
           }),
         });
+
+        // Drop response if a newer save was initiated
+        if (thisVersion !== requestVersionRef.current) {
+          return;
+        }
+
         if (res.ok) {
           const updated: RoutineWorkflow = await res.json();
+          if (thisVersion !== requestVersionRef.current) return;
+
           setRoutines((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
           currentRoutineRef.current = {
             id: updated.id,
@@ -125,11 +153,23 @@ export const RoutineBuilder: React.FC<RoutineBuilderProps> = ({ backendBaseUrl }
             connections: updated.connections || [],
           };
           setSaveStatus("saved");
+          setSaveError(null);
         } else {
           setSaveStatus("unsaved");
+          setSaveError(`Failed to persist changes (HTTP ${res.status}).`);
         }
-      } catch {
+      } catch (err: any) {
+        if (err?.name === "AbortError") {
+          // Replaced by newer request
+          return;
+        }
+        if (thisVersion !== requestVersionRef.current) return;
         setSaveStatus("unsaved");
+        setSaveError("Failed to persist changes to server. Check connection.");
+      } finally {
+        if (activeAbortControllerRef.current === controller) {
+          activeAbortControllerRef.current = null;
+        }
       }
     };
 
@@ -355,6 +395,27 @@ export const RoutineBuilder: React.FC<RoutineBuilderProps> = ({ backendBaseUrl }
         </div>
       </header>
 
+      {/* Save Error Alert Banner with Retry */}
+      {saveError && (
+        <div className="rb-save-error-banner" role="alert">
+          <span>⚠️ {saveError}</span>
+          <button
+            type="button"
+            className="rb-retry-save-btn"
+            onClick={() => updateWorkflow(undefined, undefined, true)}
+          >
+            Retry
+          </button>
+          <button
+            type="button"
+            className="rb-dismiss-error-btn"
+            onClick={() => setSaveError(null)}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Main Workspace Layout */}
       <div className="rb-workspace">
         {/* Left Sidebar: Routine Navigation */}
@@ -404,6 +465,7 @@ export const RoutineBuilder: React.FC<RoutineBuilderProps> = ({ backendBaseUrl }
             onUpdateStage={(updated) => {
               if (!currentRoutine) return;
               const stages = currentRoutineRef.current?.stages ?? currentRoutine.stages ?? [];
+              if (!stages.some((s) => s.id === updated.id)) return;
               handleUpdateStages(
                 stages.map((s) => (s.id === updated.id ? updated : s))
               );

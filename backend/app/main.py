@@ -1868,6 +1868,8 @@ def format_routine_dict(r: RoutineWorkflow, db: Session, include_history: bool =
         db.refresh(active_cycle_row)
 
     occurrences = json.loads(active_cycle_row.occurrences_json or "{}")
+    valid_stage_ids = {s.get("id") for s in stages if s.get("id")}
+    occurrences = {k: v for k, v in occurrences.items() if k in valid_stage_ids}
 
     # Update dependencies state for any uncompleted stage
     for s in stages:
